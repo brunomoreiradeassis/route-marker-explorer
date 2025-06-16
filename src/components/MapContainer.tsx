@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import MapSidebar from './MapSidebar';
@@ -140,7 +139,7 @@ const MapContainer = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="min-h-screen flex w-full overflow-hidden">
         <MapSidebar
           routes={routes}
           currentRoute={currentRoute}
@@ -149,7 +148,7 @@ const MapContainer = () => {
           onRemoveRoute={removeRoute}
           onRemoveMarco={removeMarco}
         />
-        <main className="flex-1">
+        <main className="flex-1 flex flex-col min-w-0 h-screen">
           <MapView
             currentRoute={currentRoute}
             onAddMarco={addMarco}

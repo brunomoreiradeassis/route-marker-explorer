@@ -42,31 +42,47 @@ const MapView: React.FC<MapViewProps> = ({
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    map.current = L.map(mapContainer.current).setView([-16.6805776, -49.4375273], 16);
-
-    // Adiciona tile layer do OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map.current);
-
-    // Event listener para clique direito
-    map.current.on('contextmenu', (e: L.LeafletMouseEvent) => {
-      const containerPoint = map.current!.latLngToContainerPoint(e.latlng);
-      setContextMenu({
-        x: containerPoint.x,
-        y: containerPoint.y,
-        lat: e.latlng.lat,
-        lng: e.latlng.lng,
+    // Aguarda um pequeno delay para garantir que o container esteja renderizado
+    setTimeout(() => {
+      if (!mapContainer.current) return;
+      
+      map.current = L.map(mapContainer.current, {
+        center: [-16.6805776, -49.4375273],
+        zoom: 16,
+        zoomControl: true,
+        attributionControl: true
       });
-    });
 
-    // Fecha o menu de contexto ao clicar no mapa
-    map.current.on('click', () => {
-      setContextMenu(null);
-    });
+      // Adiciona tile layer do OpenStreetMap
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map.current);
 
-    // Tenta obter localização atual
-    getCurrentLocation();
+      // Event listener para clique direito
+      map.current.on('contextmenu', (e: L.LeafletMouseEvent) => {
+        const containerPoint = map.current!.latLngToContainerPoint(e.latlng);
+        setContextMenu({
+          x: containerPoint.x,
+          y: containerPoint.y,
+          lat: e.latlng.lat,
+          lng: e.latlng.lng,
+        });
+      });
+
+      // Fecha o menu de contexto ao clicar no mapa
+      map.current.on('click', () => {
+        setContextMenu(null);
+      });
+
+      // Força o redimensionamento do mapa
+      setTimeout(() => {
+        map.current?.invalidateSize();
+      }, 100);
+
+      // Tenta obter localização atual
+      getCurrentLocation();
+    }, 100);
 
     return () => {
       if (map.current) {
@@ -264,27 +280,95 @@ const MapView: React.FC<MapViewProps> = ({
     setContextMenu(null);
   }, [contextMenu, onAddMarco]);
 
+  // Atualiza marcadores quando a rota atual muda
+  useEffect(() => {
+    if (!map.current || !currentRoute) return;
+
+    // Remove marcadores existentes da rota
+    routeMarkers.forEach(marker => marker.remove());
+    if (routePath) {
+      routePath.remove();
+    }
+
+    if (currentRoute.marcos.length === 0) {
+      setRouteMarkers([]);
+      setRoutePath(null);
+      return;
+    }
+
+    // Adiciona marcadores
+    const newMarkers: L.Marker[] = [];
+    currentRoute.marcos.forEach((marco) => {
+      const markerColor = getMarcoColor(marco.type);
+      const marker = L.marker([marco.lat, marco.lng], {
+        icon: L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        })
+      }).addTo(map.current!);
+
+      marker.bindPopup(`<b>${marco.name}</b><br>Tipo: ${getMarcoTypeName(marco.type)}`);
+      newMarkers.push(marker);
+    });
+
+    setRouteMarkers(newMarkers);
+
+    // Desenha linha da rota se houver pelo menos 2 marcos
+    if (currentRoute.marcos.length >= 2) {
+      const sortedMarcos = [...currentRoute.marcos].sort((a, b) => {
+        const order = { inicio: 0, meio: 1, fim: 2 };
+        return order[a.type] - order[b.type];
+      });
+
+      const coordinates: [number, number][] = sortedMarcos.map((marco) => [marco.lat, marco.lng]);
+
+      const polyline = L.polyline(coordinates, { 
+        color: currentRoute.color, 
+        weight: 4 
+      }).addTo(map.current!);
+
+      setRoutePath(polyline);
+
+      // Ajusta o zoom para mostrar todos os marcos
+      const group = new L.FeatureGroup(newMarkers);
+      map.current!.fitBounds(group.getBounds(), { padding: [20, 20] });
+    } else if (currentRoute.marcos.length === 1) {
+      map.current!.setView([currentRoute.marcos[0].lat, currentRoute.marcos[0].lng], 16);
+    }
+  }, [currentRoute]);
+
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col h-full">
       {/* Barra de busca */}
-      <div className="p-4 border-b bg-background">
-        <div className="flex gap-2 max-w-md">
+      <div className="p-2 sm:p-4 border-b bg-background shrink-0">
+        <div className="flex flex-col sm:flex-row gap-2 w-full">
           <Input
             placeholder="Digite um endereço para buscar..."
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && searchAddress()}
+            className="flex-1"
           />
-          <Button onClick={searchAddress}>Buscar</Button>
-          <Button variant="outline" onClick={getCurrentLocation}>
-            Minha Localização
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={searchAddress} className="flex-1 sm:flex-none">
+              Buscar
+            </Button>
+            <Button variant="outline" onClick={getCurrentLocation} className="flex-1 sm:flex-none whitespace-nowrap">
+              Minha Localização
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Container do mapa */}
-      <div className="flex-1 relative">
-        <div ref={mapContainer} className="absolute inset-0" />
+      <div className="flex-1 relative min-h-0">
+        <div 
+          ref={mapContainer} 
+          className="absolute inset-0 w-full h-full z-0"
+          style={{ minHeight: '400px' }}
+        />
         
         {/* Menu de contexto */}
         {contextMenu && (
