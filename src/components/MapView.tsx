@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Route, Marco } from '../types/map';
 import MapContextMenu from './MapContextMenu';
 import { useToast } from '@/hooks/use-toast';
+import mapboxgl from 'mapbox-gl';
 
 interface MapViewProps {
   currentRoute: Route | null;
@@ -18,7 +19,7 @@ const MapView: React.FC<MapViewProps> = ({
   mapboxToken,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<any>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -26,53 +27,44 @@ const MapView: React.FC<MapViewProps> = ({
     lat: number;
     lng: number;
   } | null>(null);
-  const [currentLocationMarker, setCurrentLocationMarker] = useState<any>(null);
+  const [currentLocationMarker, setCurrentLocationMarker] = useState<mapboxgl.Marker | null>(null);
   const { toast } = useToast();
 
   // Inicializa o mapa
   useEffect(() => {
     if (!mapContainer.current || !mapboxToken || map.current) return;
 
-    import('mapbox-gl').then((mapboxgl) => {
-      mapboxgl.default.accessToken = mapboxToken;
+    mapboxgl.accessToken = mapboxToken;
 
-      map.current = new mapboxgl.default.Map({
-        container: mapContainer.current!,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [-49.4375273, -16.6805776], // Coordenadas do código Python
-        zoom: 16,
-      });
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-49.4375273, -16.6805776], // Coordenadas do código Python
+      zoom: 16,
+    });
 
-      // Adiciona controles de navegação
-      map.current.addControl(new mapboxgl.default.NavigationControl(), 'top-right');
+    // Adiciona controles de navegação
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-      // Event listener para clique direito
-      map.current.on('contextmenu', (e: any) => {
-        e.preventDefault();
-        const { point, lngLat } = e;
-        setContextMenu({
-          x: point.x,
-          y: point.y,
-          lat: lngLat.lat,
-          lng: lngLat.lng,
-        });
-      });
-
-      // Fecha o menu de contexto ao clicar no mapa
-      map.current.on('click', () => {
-        setContextMenu(null);
-      });
-
-      // Tenta obter localização atual
-      getCurrentLocation();
-    }).catch((error) => {
-      console.error('Erro ao carregar Mapbox:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar o mapa. Verifique o token do Mapbox.",
-        variant: "destructive"
+    // Event listener para clique direito
+    map.current.on('contextmenu', (e: mapboxgl.MapMouseEvent) => {
+      e.preventDefault();
+      const { point, lngLat } = e;
+      setContextMenu({
+        x: point.x,
+        y: point.y,
+        lat: lngLat.lat,
+        lng: lngLat.lng,
       });
     });
+
+    // Fecha o menu de contexto ao clicar no mapa
+    map.current.on('click', () => {
+      setContextMenu(null);
+    });
+
+    // Tenta obter localização atual
+    getCurrentLocation();
 
     return () => {
       if (map.current) {
@@ -187,7 +179,7 @@ const MapView: React.FC<MapViewProps> = ({
     }
 
     // Ajusta o zoom para mostrar todos os marcos
-    const bounds = new (window as any).mapboxgl.LngLatBounds();
+    const bounds = new mapboxgl.LngLatBounds();
     currentRoute.marcos.forEach((marco) => {
       bounds.extend([marco.lng, marco.lat]);
     });
@@ -237,18 +229,16 @@ const MapView: React.FC<MapViewProps> = ({
           }
 
           // Adiciona novo marcador
-          import('mapbox-gl').then((mapboxgl) => {
-            const marker = new mapboxgl.default.Marker({
-              color: '#22d3ee', // cyan-400
-            })
-              .setLngLat([longitude, latitude])
-              .setPopup(
-                new mapboxgl.default.Popup().setHTML('<h3>Minha Localização</h3>')
-              )
-              .addTo(map.current);
+          const marker = new mapboxgl.Marker({
+            color: '#22d3ee', // cyan-400
+          })
+            .setLngLat([longitude, latitude])
+            .setPopup(
+              new mapboxgl.Popup().setHTML('<h3>Minha Localização</h3>')
+            )
+            .addTo(map.current);
 
-            setCurrentLocationMarker(marker);
-          });
+          setCurrentLocationMarker(marker);
 
           toast({
             title: "Localização encontrada",
