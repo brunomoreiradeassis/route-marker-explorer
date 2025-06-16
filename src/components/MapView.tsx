@@ -92,9 +92,9 @@ const MapView: React.FC<MapViewProps> = ({
 
     // Adiciona marcadores
     const features = currentRoute.marcos.map((marco) => ({
-      type: 'Feature',
+      type: "Feature" as const,
       geometry: {
-        type: 'Point',
+        type: "Point" as const,
         coordinates: [marco.lng, marco.lat],
       },
       properties: {
@@ -160,6 +160,7 @@ const MapView: React.FC<MapViewProps> = ({
             type: 'LineString',
             coordinates,
           },
+          properties: {},
         },
       });
 
