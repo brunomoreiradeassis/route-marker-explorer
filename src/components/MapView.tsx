@@ -1,10 +1,11 @@
-
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Route, Marco } from '../types/map';
 import MapContextMenu from './MapContextMenu';
+import RouteInfoCard from './RouteInfoCard';
 import { useToast } from '@/hooks/use-toast';
+import { useRouting } from '../hooks/useRouting';
 import L from 'leaflet';
 
 // Fix for default markers in Leaflet
@@ -37,6 +38,7 @@ const MapView: React.FC<MapViewProps> = ({
   const [routeMarkers, setRouteMarkers] = useState<L.Marker[]>([]);
   const [routePath, setRoutePath] = useState<L.Polyline | null>(null);
   const { toast } = useToast();
+  const { routeInfo, isLoading, calculateRoute } = useRouting();
 
   // Inicializa o mapa
   useEffect(() => {
@@ -92,9 +94,18 @@ const MapView: React.FC<MapViewProps> = ({
     };
   }, []);
 
-  // Atualiza marcadores quando a rota atual muda
+  // Atualiza marcadores e rota quando a rota atual muda
   useEffect(() => {
-    if (!map.current || !currentRoute) return;
+    if (!map.current || !currentRoute) {
+      // Remove marcadores e rotas se não há rota selecionada
+      routeMarkers.forEach(marker => marker.remove());
+      if (routePath) {
+        routePath.remove();
+      }
+      setRouteMarkers([]);
+      setRoutePath(null);
+      return;
+    }
 
     // Remove marcadores existentes da rota
     routeMarkers.forEach(marker => marker.remove());
@@ -127,29 +138,33 @@ const MapView: React.FC<MapViewProps> = ({
 
     setRouteMarkers(newMarkers);
 
-    // Desenha linha da rota se houver pelo menos 2 marcos
+    // Calcula e desenha a rota se houver pelo menos 2 marcos
     if (currentRoute.marcos.length >= 2) {
-      const sortedMarcos = [...currentRoute.marcos].sort((a, b) => {
-        const order = { inicio: 0, meio: 1, fim: 2 };
-        return order[a.type] - order[b.type];
+      calculateRoute(currentRoute.marcos).then((routeData) => {
+        if (routeData && map.current) {
+          // Remove rota anterior se existir
+          if (routePath) {
+            routePath.remove();
+          }
+          
+          // Desenha a nova rota usando as coordenadas da API ou linha reta
+          const polyline = L.polyline(routeData.geometry, { 
+            color: currentRoute.color, 
+            weight: 4,
+            opacity: 0.8
+          }).addTo(map.current!);
+
+          setRoutePath(polyline);
+
+          // Ajusta o zoom para mostrar todos os marcos
+          const group = new L.FeatureGroup([...newMarkers, polyline]);
+          map.current!.fitBounds(group.getBounds(), { padding: [20, 20] });
+        }
       });
-
-      const coordinates: [number, number][] = sortedMarcos.map((marco) => [marco.lat, marco.lng]);
-
-      const polyline = L.polyline(coordinates, { 
-        color: currentRoute.color, 
-        weight: 4 
-      }).addTo(map.current!);
-
-      setRoutePath(polyline);
-
-      // Ajusta o zoom para mostrar todos os marcos
-      const group = new L.FeatureGroup(newMarkers);
-      map.current!.fitBounds(group.getBounds(), { padding: [20, 20] });
     } else if (currentRoute.marcos.length === 1) {
       map.current!.setView([currentRoute.marcos[0].lat, currentRoute.marcos[0].lng], 16);
     }
-  }, [currentRoute]);
+  }, [currentRoute, calculateRoute]);
 
   const getMarcoColor = (type: Marco['type']) => {
     switch (type) {
@@ -280,65 +295,6 @@ const MapView: React.FC<MapViewProps> = ({
     setContextMenu(null);
   }, [contextMenu, onAddMarco]);
 
-  // Atualiza marcadores quando a rota atual muda
-  useEffect(() => {
-    if (!map.current || !currentRoute) return;
-
-    // Remove marcadores existentes da rota
-    routeMarkers.forEach(marker => marker.remove());
-    if (routePath) {
-      routePath.remove();
-    }
-
-    if (currentRoute.marcos.length === 0) {
-      setRouteMarkers([]);
-      setRoutePath(null);
-      return;
-    }
-
-    // Adiciona marcadores
-    const newMarkers: L.Marker[] = [];
-    currentRoute.marcos.forEach((marco) => {
-      const markerColor = getMarcoColor(marco.type);
-      const marker = L.marker([marco.lat, marco.lng], {
-        icon: L.divIcon({
-          className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-          iconSize: [20, 20],
-          iconAnchor: [10, 10]
-        })
-      }).addTo(map.current!);
-
-      marker.bindPopup(`<b>${marco.name}</b><br>Tipo: ${getMarcoTypeName(marco.type)}`);
-      newMarkers.push(marker);
-    });
-
-    setRouteMarkers(newMarkers);
-
-    // Desenha linha da rota se houver pelo menos 2 marcos
-    if (currentRoute.marcos.length >= 2) {
-      const sortedMarcos = [...currentRoute.marcos].sort((a, b) => {
-        const order = { inicio: 0, meio: 1, fim: 2 };
-        return order[a.type] - order[b.type];
-      });
-
-      const coordinates: [number, number][] = sortedMarcos.map((marco) => [marco.lat, marco.lng]);
-
-      const polyline = L.polyline(coordinates, { 
-        color: currentRoute.color, 
-        weight: 4 
-      }).addTo(map.current!);
-
-      setRoutePath(polyline);
-
-      // Ajusta o zoom para mostrar todos os marcos
-      const group = new L.FeatureGroup(newMarkers);
-      map.current!.fitBounds(group.getBounds(), { padding: [20, 20] });
-    } else if (currentRoute.marcos.length === 1) {
-      map.current!.setView([currentRoute.marcos[0].lat, currentRoute.marcos[0].lng], 16);
-    }
-  }, [currentRoute]);
-
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Barra de busca */}
@@ -380,6 +336,27 @@ const MapView: React.FC<MapViewProps> = ({
             onAddMarco={handleAddMarco}
             onClose={() => setContextMenu(null)}
           />
+        )}
+
+        {/* Card de informações da rota */}
+        {currentRoute && routeInfo && (
+          <div className="absolute bottom-4 left-4 right-4 z-10">
+            <RouteInfoCard
+              routeName={currentRoute.name}
+              distance={routeInfo.distance}
+              duration={routeInfo.duration}
+              color={currentRoute.color}
+            />
+          </div>
+        )}
+
+        {/* Indicador de carregamento */}
+        {isLoading && (
+          <div className="absolute bottom-4 left-4 right-4 z-10">
+            <div className="bg-background/95 backdrop-blur-sm border rounded-lg p-4 text-center">
+              <span className="text-sm text-muted-foreground">Calculando rota...</span>
+            </div>
+          </div>
         )}
       </div>
     </div>

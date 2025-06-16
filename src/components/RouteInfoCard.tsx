@@ -1,0 +1,60 @@
+
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { MapPin, Clock, Navigation } from 'lucide-react';
+
+interface RouteInfoCardProps {
+  routeName: string;
+  distance: number; // em metros
+  duration: number; // em segundos
+  color: string;
+}
+
+const RouteInfoCard: React.FC<RouteInfoCardProps> = ({
+  routeName,
+  distance,
+  duration,
+  color
+}) => {
+  const formatDistance = (meters: number) => {
+    if (meters < 1000) {
+      return `${Math.round(meters)} m`;
+    }
+    return `${(meters / 1000).toFixed(1)} km`;
+  };
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}min`;
+    }
+    return `${minutes}min`;
+  };
+
+  return (
+    <Card className="w-full bg-background/95 backdrop-blur-sm border shadow-lg">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Navigation className="w-4 h-4" style={{ color }} />
+          {routeName}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="flex justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">{formatDistance(distance)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">{formatDuration(duration)}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default RouteInfoCard;
