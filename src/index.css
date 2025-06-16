@@ -1,6 +1,10 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Import Mapbox GL CSS */
+@import 'mapbox-gl/dist/mapbox-gl.css';
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
 
@@ -100,4 +104,21 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Mapbox GL overrides for better integration */
+.mapboxgl-popup-content {
+  @apply bg-background text-foreground border-border rounded-md shadow-lg;
+}
+
+.mapboxgl-popup-close-button {
+  @apply text-foreground hover:text-foreground/80;
+}
+
+.mapboxgl-ctrl-group {
+  @apply bg-background border-border;
+}
+
+.mapboxgl-ctrl button {
+  @apply text-foreground hover:bg-accent;
 }
