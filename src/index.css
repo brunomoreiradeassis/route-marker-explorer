@@ -1,6 +1,6 @@
 
-/* Import Mapbox GL CSS */
-@import 'mapbox-gl/dist/mapbox-gl.css';
+/* Import Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
 
 @tailwind base;
 @tailwind components;
@@ -106,19 +106,19 @@
   }
 }
 
-/* Mapbox GL overrides for better integration */
-.mapboxgl-popup-content {
+/* Leaflet overrides for better integration */
+.leaflet-popup-content-wrapper {
   @apply bg-background text-foreground border-border rounded-md shadow-lg;
 }
 
-.mapboxgl-popup-close-button {
+.leaflet-popup-close-button {
   @apply text-foreground hover:text-foreground/80;
 }
 
-.mapboxgl-ctrl-group {
+.leaflet-control-container .leaflet-control {
   @apply bg-background border-border;
 }
 
-.mapboxgl-ctrl button {
+.leaflet-control-zoom a {
   @apply text-foreground hover:bg-accent;
 }

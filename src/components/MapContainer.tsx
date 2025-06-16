@@ -9,13 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 const MapContainer = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [currentRoute, setCurrentRoute] = useState<Route | null>(null);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
   const { toast } = useToast();
 
   // Carrega dados do localStorage
   useEffect(() => {
     const savedRoutes = localStorage.getItem('map-routes');
-    const savedToken = localStorage.getItem('mapbox-token');
     
     if (savedRoutes) {
       try {
@@ -33,10 +31,6 @@ const MapContainer = () => {
         });
       }
     }
-
-    if (savedToken) {
-      setMapboxToken(savedToken);
-    }
   }, []);
 
   // Salva dados no localStorage
@@ -52,11 +46,6 @@ const MapContainer = () => {
         variant: "destructive"
       });
     }
-  };
-
-  const saveMapboxToken = (token: string) => {
-    localStorage.setItem('mapbox-token', token);
-    setMapboxToken(token);
   };
 
   const createNewRoute = (name: string) => {
@@ -159,14 +148,11 @@ const MapContainer = () => {
           onSelectRoute={selectRoute}
           onRemoveRoute={removeRoute}
           onRemoveMarco={removeMarco}
-          mapboxToken={mapboxToken}
-          onSaveMapboxToken={saveMapboxToken}
         />
         <main className="flex-1">
           <MapView
             currentRoute={currentRoute}
             onAddMarco={addMarco}
-            mapboxToken={mapboxToken}
           />
         </main>
       </div>

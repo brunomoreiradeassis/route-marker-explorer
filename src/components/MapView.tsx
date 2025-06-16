@@ -5,21 +5,27 @@ import { Button } from '@/components/ui/button';
 import { Route, Marco } from '../types/map';
 import MapContextMenu from './MapContextMenu';
 import { useToast } from '@/hooks/use-toast';
-import mapboxgl from 'mapbox-gl';
+import L from 'leaflet';
+
+// Fix for default markers in Leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 interface MapViewProps {
   currentRoute: Route | null;
   onAddMarco: (marco: Omit<Marco, 'id'>) => void;
-  mapboxToken: string;
 }
 
 const MapView: React.FC<MapViewProps> = ({
   currentRoute,
   onAddMarco,
-  mapboxToken,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
+  const map = useRef<L.Map | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -27,34 +33,30 @@ const MapView: React.FC<MapViewProps> = ({
     lat: number;
     lng: number;
   } | null>(null);
-  const [currentLocationMarker, setCurrentLocationMarker] = useState<mapboxgl.Marker | null>(null);
+  const [currentLocationMarker, setCurrentLocationMarker] = useState<L.Marker | null>(null);
+  const [routeMarkers, setRouteMarkers] = useState<L.Marker[]>([]);
+  const [routePath, setRoutePath] = useState<L.Polyline | null>(null);
   const { toast } = useToast();
 
   // Inicializa o mapa
   useEffect(() => {
-    if (!mapContainer.current || !mapboxToken || map.current) return;
+    if (!mapContainer.current || map.current) return;
 
-    mapboxgl.accessToken = mapboxToken;
+    map.current = L.map(mapContainer.current).setView([-16.6805776, -49.4375273], 16);
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [-49.4375273, -16.6805776], // Coordenadas do código Python
-      zoom: 16,
-    });
-
-    // Adiciona controles de navegação
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    // Adiciona tile layer do OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map.current);
 
     // Event listener para clique direito
-    map.current.on('contextmenu', (e: mapboxgl.MapMouseEvent) => {
-      e.preventDefault();
-      const { point, lngLat } = e;
+    map.current.on('contextmenu', (e: L.LeafletMouseEvent) => {
+      const containerPoint = map.current!.latLngToContainerPoint(e.latlng);
       setContextMenu({
-        x: point.x,
-        y: point.y,
-        lat: lngLat.lat,
-        lng: lngLat.lng,
+        x: containerPoint.x,
+        y: containerPoint.y,
+        lat: e.latlng.lat,
+        lng: e.latlng.lng,
       });
     });
 
@@ -72,76 +74,42 @@ const MapView: React.FC<MapViewProps> = ({
         map.current = null;
       }
     };
-  }, [mapboxToken]);
+  }, []);
 
   // Atualiza marcadores quando a rota atual muda
   useEffect(() => {
     if (!map.current || !currentRoute) return;
 
     // Remove marcadores existentes da rota
-    if (map.current.getSource('route-markers')) {
-      map.current.removeLayer('route-markers');
-      map.current.removeSource('route-markers');
-    }
-    if (map.current.getSource('route-line')) {
-      map.current.removeLayer('route-line');
-      map.current.removeSource('route-line');
+    routeMarkers.forEach(marker => marker.remove());
+    if (routePath) {
+      routePath.remove();
     }
 
-    if (currentRoute.marcos.length === 0) return;
+    if (currentRoute.marcos.length === 0) {
+      setRouteMarkers([]);
+      setRoutePath(null);
+      return;
+    }
 
     // Adiciona marcadores
-    const features = currentRoute.marcos.map((marco) => ({
-      type: "Feature" as const,
-      geometry: {
-        type: "Point" as const,
-        coordinates: [marco.lng, marco.lat],
-      },
-      properties: {
-        title: marco.name,
-        type: marco.type,
-        color: getMarcoColor(marco.type),
-      },
-    }));
+    const newMarkers: L.Marker[] = [];
+    currentRoute.marcos.forEach((marco) => {
+      const markerColor = getMarcoColor(marco.type);
+      const marker = L.marker([marco.lat, marco.lng], {
+        icon: L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        })
+      }).addTo(map.current!);
 
-    map.current.addSource('route-markers', {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features,
-      },
+      marker.bindPopup(`<b>${marco.name}</b><br>Tipo: ${getMarcoTypeName(marco.type)}`);
+      newMarkers.push(marker);
     });
 
-    map.current.addLayer({
-      id: 'route-markers',
-      type: 'circle',
-      source: 'route-markers',
-      paint: {
-        'circle-radius': 8,
-        'circle-color': ['get', 'color'],
-        'circle-stroke-width': 2,
-        'circle-stroke-color': '#ffffff',
-      },
-    });
-
-    // Adiciona labels
-    map.current.addLayer({
-      id: 'route-markers-labels',
-      type: 'symbol',
-      source: 'route-markers',
-      layout: {
-        'text-field': ['get', 'title'],
-        'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
-        'text-offset': [0, 1.5],
-        'text-anchor': 'top',
-        'text-size': 12,
-      },
-      paint: {
-        'text-color': '#000000',
-        'text-halo-color': '#ffffff',
-        'text-halo-width': 1,
-      },
-    });
+    setRouteMarkers(newMarkers);
 
     // Desenha linha da rota se houver pelo menos 2 marcos
     if (currentRoute.marcos.length >= 2) {
@@ -150,46 +118,20 @@ const MapView: React.FC<MapViewProps> = ({
         return order[a.type] - order[b.type];
       });
 
-      const coordinates = sortedMarcos.map((marco) => [marco.lng, marco.lat]);
+      const coordinates: [number, number][] = sortedMarcos.map((marco) => [marco.lat, marco.lng]);
 
-      map.current.addSource('route-line', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          geometry: {
-            type: 'LineString',
-            coordinates,
-          },
-          properties: {},
-        },
-      });
+      const polyline = L.polyline(coordinates, { 
+        color: currentRoute.color, 
+        weight: 4 
+      }).addTo(map.current!);
 
-      map.current.addLayer({
-        id: 'route-line',
-        type: 'line',
-        source: 'route-line',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
-        paint: {
-          'line-color': currentRoute.color,
-          'line-width': 4,
-        },
-      });
-    }
+      setRoutePath(polyline);
 
-    // Ajusta o zoom para mostrar todos os marcos
-    const bounds = new mapboxgl.LngLatBounds();
-    currentRoute.marcos.forEach((marco) => {
-      bounds.extend([marco.lng, marco.lat]);
-    });
-
-    if (currentRoute.marcos.length > 1) {
-      map.current.fitBounds(bounds, { padding: 50 });
+      // Ajusta o zoom para mostrar todos os marcos
+      const group = new L.FeatureGroup(newMarkers);
+      map.current!.fitBounds(group.getBounds(), { padding: [20, 20] });
     } else if (currentRoute.marcos.length === 1) {
-      map.current.setCenter([currentRoute.marcos[0].lng, currentRoute.marcos[0].lat]);
-      map.current.setZoom(16);
+      map.current!.setView([currentRoute.marcos[0].lat, currentRoute.marcos[0].lng], 16);
     }
   }, [currentRoute]);
 
@@ -203,6 +145,19 @@ const MapView: React.FC<MapViewProps> = ({
         return '#ef4444'; // red-500
       default:
         return '#3b82f6'; // blue-500
+    }
+  };
+
+  const getMarcoTypeName = (type: Marco['type']) => {
+    switch (type) {
+      case 'inicio':
+        return 'Início';
+      case 'meio':
+        return 'Meio';
+      case 'fim':
+        return 'Fim';
+      default:
+        return 'Marco';
     }
   };
 
@@ -221,8 +176,7 @@ const MapView: React.FC<MapViewProps> = ({
         const { latitude, longitude } = position.coords;
         
         if (map.current) {
-          map.current.setCenter([longitude, latitude]);
-          map.current.setZoom(16);
+          map.current.setView([latitude, longitude], 16);
 
           // Remove marcador anterior se existir
           if (currentLocationMarker) {
@@ -230,15 +184,16 @@ const MapView: React.FC<MapViewProps> = ({
           }
 
           // Adiciona novo marcador
-          const marker = new mapboxgl.Marker({
-            color: '#22d3ee', // cyan-400
-          })
-            .setLngLat([longitude, latitude])
-            .setPopup(
-              new mapboxgl.Popup().setHTML('<h3>Minha Localização</h3>')
-            )
-            .addTo(map.current);
+          const marker = L.marker([latitude, longitude], {
+            icon: L.divIcon({
+              className: 'current-location-marker',
+              html: '<div style="background-color: #22d3ee; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"></div>',
+              iconSize: [16, 16],
+              iconAnchor: [8, 8]
+            })
+          }).addTo(map.current);
 
+          marker.bindPopup('Minha Localização');
           setCurrentLocationMarker(marker);
 
           toast({
@@ -260,25 +215,22 @@ const MapView: React.FC<MapViewProps> = ({
   };
 
   const searchAddress = async () => {
-    if (!searchValue.trim() || !mapboxToken) return;
+    if (!searchValue.trim()) return;
 
     try {
       const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          searchValue
-        )}.json?access_token=${mapboxToken}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchValue)}&limit=1`
       );
 
       const data = await response.json();
 
-      if (data.features && data.features.length > 0) {
-        const [lng, lat] = data.features[0].center;
-        map.current?.setCenter([lng, lat]);
-        map.current?.setZoom(16);
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        map.current?.setView([parseFloat(lat), parseFloat(lon)], 16);
 
         toast({
           title: "Endereço encontrado",
-          description: data.features[0].place_name
+          description: data[0].display_name
         });
       } else {
         toast({
@@ -311,32 +263,6 @@ const MapView: React.FC<MapViewProps> = ({
 
     setContextMenu(null);
   }, [contextMenu, onAddMarco]);
-
-  const getMarcoTypeName = (type: Marco['type']) => {
-    switch (type) {
-      case 'inicio':
-        return 'Início';
-      case 'meio':
-        return 'Meio';
-      case 'fim':
-        return 'Fim';
-      default:
-        return 'Marco';
-    }
-  };
-
-  if (!mapboxToken) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-muted">
-        <div className="text-center p-8">
-          <h2 className="text-2xl font-bold mb-4">Configure o Mapbox</h2>
-          <p className="text-muted-foreground">
-            Configure seu token do Mapbox na sidebar para começar a usar o mapa.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex-1 flex flex-col">

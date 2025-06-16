@@ -21,8 +21,7 @@ import {
   MapPin, 
   Route as RouteIcon, 
   Plus, 
-  Trash2,
-  Settings
+  Trash2
 } from 'lucide-react';
 import { Route, Marco } from '../types/map';
 import {
@@ -43,8 +42,6 @@ interface MapSidebarProps {
   onSelectRoute: (route: Route) => void;
   onRemoveRoute: (routeId: string) => void;
   onRemoveMarco: (marcoId: string) => void;
-  mapboxToken: string;
-  onSaveMapboxToken: (token: string) => void;
 }
 
 const MapSidebar: React.FC<MapSidebarProps> = ({
@@ -54,13 +51,9 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
   onSelectRoute,
   onRemoveRoute,
   onRemoveMarco,
-  mapboxToken,
-  onSaveMapboxToken,
 }) => {
   const [newRouteName, setNewRouteName] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isTokenDialogOpen, setIsTokenDialogOpen] = useState(false);
-  const [tokenInput, setTokenInput] = useState(mapboxToken);
 
   const handleCreateRoute = () => {
     if (newRouteName.trim()) {
@@ -68,11 +61,6 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
       setNewRouteName('');
       setIsCreateDialogOpen(false);
     }
-  };
-
-  const handleSaveToken = () => {
-    onSaveMapboxToken(tokenInput);
-    setIsTokenDialogOpen(false);
   };
 
   const getMarcoTypeColor = (type: Marco['type']) => {
@@ -108,56 +96,14 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
           <h1 className="text-lg font-bold">Sistema de Rotas</h1>
           <SidebarTrigger />
         </div>
-        {!mapboxToken && (
-          <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded-md">
-            <p className="text-sm text-yellow-800">
-              Configure seu token do Mapbox para usar o mapa
-            </p>
-          </div>
-        )}
+        <div className="mt-2 p-2 bg-green-100 border border-green-300 rounded-md">
+          <p className="text-sm text-green-800">
+            Usando OpenStreetMap - mapa gratuito e aberto
+          </p>
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="p-4 space-y-6">
-        {/* Configurações */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Configurações</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <Dialog open={isTokenDialogOpen} onOpenChange={setIsTokenDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configurar Mapbox
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Token do Mapbox</DialogTitle>
-                  <DialogDescription>
-                    Insira seu token público do Mapbox. Você pode obter um em{' '}
-                    <a href="https://mapbox.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
-                      mapbox.com
-                    </a>
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="token">Token Público</Label>
-                    <Input
-                      id="token"
-                      value={tokenInput}
-                      onChange={(e) => setTokenInput(e.target.value)}
-                      placeholder="pk.eyJ1IjoibXl1c2VybmFtZSIsImEiOiJjbGtk..."
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleSaveToken}>Salvar Token</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
         {/* Rotas */}
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center justify-between">
@@ -285,6 +231,7 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
             <p>• Clique com o botão direito no mapa para adicionar marcos</p>
             <p>• Use marcos de Início, Meio e Fim para organizar sua rota</p>
             <p>• A rota será desenhada automaticamente conectando os marcos</p>
+            <p>• Mapa powered by OpenStreetMap</p>
           </CardContent>
         </Card>
       </SidebarContent>
