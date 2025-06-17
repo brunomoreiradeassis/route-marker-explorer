@@ -37,7 +37,7 @@ export const useRouting = () => {
         method: 'POST',
         headers: {
           'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
-          'Authorization': '5b3ce3597851110001cf6248YOUR_API_KEY_HERE', // Placeholder - usuário precisa configurar
+          'Authorization': '5b3ce3597851110001cf624841f2508d17d64215b3fbcd436a1283f9',
           'Content-Type': 'application/json; charset=utf-8'
         },
         body: JSON.stringify({
@@ -96,7 +96,7 @@ export const useRouting = () => {
       
       toast({
         title: "Aviso",
-        description: "Usando rota em linha reta. Configure uma API key do OpenRouteService para roteamento nas ruas.",
+        description: "Usando rota em linha reta. Verifique sua conexão com a internet.",
         variant: "default"
       });
       
