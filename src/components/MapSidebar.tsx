@@ -90,27 +90,27 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
   };
 
   return (
-    <Sidebar className="w-80">
-      <SidebarHeader className="p-4">
+    <Sidebar collapsible="icon" className="border-r">
+      <SidebarHeader>
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold">Sistema de Rotas</h1>
+          <h1 className="text-lg font-bold group-data-[collapsible=icon]:hidden">Sistema de Rotas</h1>
           <SidebarTrigger />
         </div>
-        <div className="mt-2 p-2 bg-green-100 border border-green-300 rounded-md">
+        <div className="mt-2 p-2 bg-green-100 border border-green-300 rounded-md group-data-[collapsible=icon]:hidden">
           <p className="text-sm text-green-800">
             Usando OpenStreetMap - mapa gratuito e aberto
           </p>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="p-4 space-y-6">
+      <SidebarContent>
         {/* Rotas */}
         <SidebarGroup>
           <SidebarGroupLabel className="flex items-center justify-between">
-            Rotas
+            <span>Rotas</span>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" className="h-6 w-6 p-0">
                   <Plus className="w-4 h-4" />
                 </Button>
               </DialogTrigger>
@@ -144,23 +144,24 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
               <SidebarMenu>
                 {routes.map((route) => (
                   <SidebarMenuItem key={route.id}>
-                    <div className="flex items-center justify-between w-full p-2 rounded-md hover:bg-accent">
+                    <div className="flex items-center justify-between w-full">
                       <SidebarMenuButton
                         onClick={() => onSelectRoute(route)}
                         className={`flex-1 justify-start ${
                           currentRoute?.id === route.id ? 'bg-accent' : ''
                         }`}
+                        tooltip={route.name}
                       >
-                        <RouteIcon className="w-4 h-4 mr-2" style={{ color: route.color }} />
+                        <RouteIcon className="w-4 h-4" style={{ color: route.color }} />
                         <span className="truncate">{route.name}</span>
                       </SidebarMenuButton>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => onRemoveRoute(route.id)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive group-data-[collapsible=icon]:hidden"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
                   </SidebarMenuItem>
@@ -179,7 +180,7 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
             <SidebarGroupContent>
               <ScrollArea className="h-64">
                 {currentRoute.marcos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground p-2">
+                  <p className="text-sm text-muted-foreground p-2 group-data-[collapsible=icon]:hidden">
                     Nenhum marco nesta rota. Clique com o botão direito no mapa para adicionar.
                   </p>
                 ) : (
@@ -192,13 +193,13 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                       .map((marco) => (
                         <Card key={marco.id} className="p-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2 min-w-0">
                               <MapPin 
-                                className={`w-4 h-4 text-white p-0.5 rounded ${getMarcoTypeColor(marco.type)}`}
+                                className={`w-4 h-4 text-white p-0.5 rounded flex-shrink-0 ${getMarcoTypeColor(marco.type)}`}
                               />
-                              <div>
-                                <p className="font-medium text-sm">{marco.name}</p>
-                                <Badge variant="secondary" className="text-xs">
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm truncate group-data-[collapsible=icon]:hidden">{marco.name}</p>
+                                <Badge variant="secondary" className="text-xs group-data-[collapsible=icon]:hidden">
                                   {getMarcoTypeName(marco.type)}
                                 </Badge>
                               </div>
@@ -207,7 +208,7 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                               size="sm"
                               variant="ghost"
                               onClick={() => onRemoveMarco(marco.id)}
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive group-data-[collapsible=icon]:hidden"
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
@@ -222,18 +223,20 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
         )}
 
         {/* Instruções */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Como usar</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs space-y-2">
-            <p>• Crie uma rota clicando no botão + ao lado de "Rotas"</p>
-            <p>• Clique com o botão direito no mapa para adicionar marcos</p>
-            <p>• Use marcos de Início, Meio e Fim para organizar sua rota</p>
-            <p>• A rota será desenhada automaticamente conectando os marcos</p>
-            <p>• Mapa powered by OpenStreetMap</p>
-          </CardContent>
-        </Card>
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Como usar</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xs space-y-2">
+              <p>• Crie uma rota clicando no botão + ao lado de "Rotas"</p>
+              <p>• Clique com o botão direito no mapa para adicionar marcos</p>
+              <p>• Use marcos de Início, Meio e Fim para organizar sua rota</p>
+              <p>• A rota será desenhada automaticamente conectando os marcos</p>
+              <p>• Mapa powered by OpenStreetMap</p>
+            </CardContent>
+          </Card>
+        </SidebarGroup>
       </SidebarContent>
     </Sidebar>
   );

@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import MapSidebar from './MapSidebar';
 import MapView from './MapView';
 import { Route, Marco } from '../types/map';
@@ -139,7 +140,7 @@ const MapContainer = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full overflow-hidden">
+      <div className="min-h-screen flex w-full">
         <MapSidebar
           routes={routes}
           currentRoute={currentRoute}
@@ -148,12 +149,12 @@ const MapContainer = () => {
           onRemoveRoute={removeRoute}
           onRemoveMarco={removeMarco}
         />
-        <main className="flex-1 flex flex-col min-w-0 h-screen">
+        <SidebarInset className="flex-1">
           <MapView
             currentRoute={currentRoute}
             onAddMarco={addMarco}
           />
-        </main>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );
