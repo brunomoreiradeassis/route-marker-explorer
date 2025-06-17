@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Route, Marco } from '../types/map';
 import MapContextMenu from './MapContextMenu';
 import RouteInfoCard from './RouteInfoCard';
+import StartRaceModal from './StartRaceModal';
 import { useToast } from '@/hooks/use-toast';
 import { useRouting } from '../hooks/useRouting';
 import L from 'leaflet';
@@ -37,8 +38,47 @@ const MapView: React.FC<MapViewProps> = ({
   const [currentLocationMarker, setCurrentLocationMarker] = useState<L.Marker | null>(null);
   const [routeMarkers, setRouteMarkers] = useState<L.Marker[]>([]);
   const [routePath, setRoutePath] = useState<L.Polyline | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [showStartRaceModal, setShowStartRaceModal] = useState(false);
+  const [raceStarted, setRaceStarted] = useState(false);
   const { toast } = useToast();
   const { routeInfo, isLoading, calculateRoute } = useRouting();
+
+  // Função para calcular distância entre dois pontos
+  const calculateDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371000; // Raio da Terra em metros
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lng2 - lng1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c;
+  }, []);
+
+  // Verifica proximidade com o marco de início
+  useEffect(() => {
+    if (!currentLocation || !currentRoute || raceStarted || !routeInfo) return;
+
+    const startMarco = currentRoute.marcos.find(marco => marco.type === 'inicio');
+    if (!startMarco) return;
+
+    const distance = calculateDistance(
+      currentLocation.lat,
+      currentLocation.lng,
+      startMarco.lat,
+      startMarco.lng
+    );
+
+    // Se estiver dentro de 20 metros do marco de início
+    if (distance <= 20 && !showStartRaceModal) {
+      setShowStartRaceModal(true);
+    }
+  }, [currentLocation, currentRoute, raceStarted, routeInfo, showStartRaceModal, calculateDistance]);
 
   // Inicializa o mapa
   useEffect(() => {
@@ -206,6 +246,9 @@ const MapView: React.FC<MapViewProps> = ({
       (position) => {
         const { latitude, longitude } = position.coords;
         
+        // Atualiza o estado da localização atual
+        setCurrentLocation({ lat: latitude, lng: longitude });
+        
         if (map.current) {
           map.current.setView([latitude, longitude], 16);
 
@@ -295,6 +338,21 @@ const MapView: React.FC<MapViewProps> = ({
     setContextMenu(null);
   }, [contextMenu, onAddMarco]);
 
+  const handleStartRace = useCallback(() => {
+    setRaceStarted(true);
+    setShowStartRaceModal(false);
+    
+    toast({
+      title: "Corrida iniciada!",
+      description: "Boa sorte na sua corrida!",
+      variant: "default"
+    });
+  }, [toast]);
+
+  const handleCloseStartModal = useCallback(() => {
+    setShowStartRaceModal(false);
+  }, []);
+
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Barra de busca */}
@@ -357,6 +415,19 @@ const MapView: React.FC<MapViewProps> = ({
               <span className="text-sm text-muted-foreground">Calculando rota...</span>
             </div>
           </div>
+        )}
+
+        {/* Modal de início da corrida */}
+        {currentRoute && routeInfo && (
+          <StartRaceModal
+            isOpen={showStartRaceModal}
+            onClose={handleCloseStartModal}
+            onStartRace={handleStartRace}
+            routeName={currentRoute.name}
+            distance={routeInfo.distance}
+            duration={routeInfo.duration}
+            color={currentRoute.color}
+          />
         )}
       </div>
     </div>
