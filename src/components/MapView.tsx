@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Route, Marco } from '../types/map';
+import { Route, Marco, Present } from '../types/map';
 import MapContextMenu from './MapContextMenu';
 import RouteInfoCard from './RouteInfoCard';
 import StartRaceModal from './StartRaceModal';
+import PresentAlert from './PresentAlert';
 import { useToast } from '@/hooks/use-toast';
 import { useRouting } from '../hooks/useRouting';
 import L from 'leaflet';
@@ -20,11 +21,17 @@ L.Icon.Default.mergeOptions({
 interface MapViewProps {
   currentRoute: Route | null;
   onAddMarco: (marco: Omit<Marco, 'id'>) => void;
+  presents: Present[];
+  onAddPresent: (present: Omit<Present, 'id'>) => void;
+  onCollectPresent: (presentId: string) => void;
 }
 
 const MapView: React.FC<MapViewProps> = ({
   currentRoute,
   onAddMarco,
+  presents,
+  onAddPresent,
+  onCollectPresent,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -37,10 +44,12 @@ const MapView: React.FC<MapViewProps> = ({
   } | null>(null);
   const [currentLocationMarker, setCurrentLocationMarker] = useState<L.Marker | null>(null);
   const [routeMarkers, setRouteMarkers] = useState<L.Marker[]>([]);
+  const [presentMarkers, setPresentMarkers] = useState<L.Marker[]>([]);
   const [routePath, setRoutePath] = useState<L.Polyline | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [showStartRaceModal, setShowStartRaceModal] = useState(false);
   const [raceStarted, setRaceStarted] = useState(false);
+  const [nearbyPresent, setNearbyPresent] = useState<Present | null>(null);
   const { toast } = useToast();
   const { routeInfo, isLoading, calculateRoute } = useRouting();
 
@@ -59,6 +68,30 @@ const MapView: React.FC<MapViewProps> = ({
 
     return R * c;
   }, []);
+
+  // Verifica proximidade com presentes
+  useEffect(() => {
+    if (!currentLocation || !presents.length) return;
+
+    const nearPresent = presents.find(present => {
+      if (present.collected) return false;
+      
+      const distance = calculateDistance(
+        currentLocation.lat,
+        currentLocation.lng,
+        present.lat,
+        present.lng
+      );
+      
+      return distance <= 15; // 15 metros de proximidade
+    });
+
+    if (nearPresent && nearPresent.id !== nearbyPresent?.id) {
+      setNearbyPresent(nearPresent);
+    } else if (!nearPresent) {
+      setNearbyPresent(null);
+    }
+  }, [currentLocation, presents, nearbyPresent, calculateDistance]);
 
   // Verifica proximidade com o marco de início
   useEffect(() => {
@@ -133,6 +166,33 @@ const MapView: React.FC<MapViewProps> = ({
       }
     };
   }, []);
+
+  // Atualiza marcadores de presentes
+  useEffect(() => {
+    if (!map.current) return;
+
+    // Remove marcadores existentes de presentes
+    presentMarkers.forEach(marker => marker.remove());
+
+    // Adiciona novos marcadores de presentes
+    const newPresentMarkers: L.Marker[] = [];
+    presents.forEach((present) => {
+      const markerColor = present.collected ? '#94a3b8' : '#eab308'; // cinza se coletado, amarelo se não
+      const marker = L.marker([present.lat, present.lng], {
+        icon: L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="background-color: ${markerColor}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px;">🎁</div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        })
+      }).addTo(map.current!);
+
+      marker.bindPopup(`<b>${present.name}</b><br>${present.description}<br>${present.collected ? '<i>Coletado</i>' : '<i>Disponível</i>'}`);
+      newPresentMarkers.push(marker);
+    });
+
+    setPresentMarkers(newPresentMarkers);
+  }, [presents]);
 
   // Atualiza marcadores e rota quando a rota atual muda
   useEffect(() => {
@@ -338,16 +398,35 @@ const MapView: React.FC<MapViewProps> = ({
     setContextMenu(null);
   }, [contextMenu, onAddMarco]);
 
-  const handleStartRace = useCallback(() => {
-    setRaceStarted(true);
-    setShowStartRaceModal(false);
+  const handleAddPresent = useCallback(() => {
+    if (!contextMenu) return;
+
+    const presentName = `Presente ${Date.now()}`;
+    
+    onAddPresent({
+      name: presentName,
+      description: 'Um presente especial te espera aqui!',
+      lat: contextMenu.lat,
+      lng: contextMenu.lng,
+    });
+
+    setContextMenu(null);
+  }, [contextMenu, onAddPresent]);
+
+  const handleCollectPresent = useCallback((presentId: string) => {
+    onCollectPresent(presentId);
+    setNearbyPresent(null);
     
     toast({
-      title: "Corrida iniciada!",
-      description: "Boa sorte na sua corrida!",
+      title: "Presente coletado!",
+      description: "Você coletou um presente! Continue explorando!",
       variant: "default"
     });
-  }, [toast]);
+  }, [onCollectPresent, toast]);
+
+  const handleClosePresentAlert = useCallback(() => {
+    setNearbyPresent(null);
+  }, []);
 
   const handleCloseStartModal = useCallback(() => {
     setShowStartRaceModal(false);
@@ -392,7 +471,17 @@ const MapView: React.FC<MapViewProps> = ({
             lat={contextMenu.lat}
             lng={contextMenu.lng}
             onAddMarco={handleAddMarco}
+            onAddPresent={handleAddPresent}
             onClose={() => setContextMenu(null)}
+          />
+        )}
+
+        {/* Alerta de presente próximo */}
+        {nearbyPresent && (
+          <PresentAlert
+            present={nearbyPresent}
+            onCollect={handleCollectPresent}
+            onClose={handleClosePresentAlert}
           />
         )}
 

@@ -7,6 +7,15 @@ export interface Marco {
   lng: number;
 }
 
+export interface Present {
+  id: string;
+  name: string;
+  description: string;
+  lat: number;
+  lng: number;
+  collected?: boolean;
+}
+
 export interface Route {
   id: string;
   name: string;
@@ -20,5 +29,6 @@ export interface MapContextMenuProps {
   lat: number;
   lng: number;
   onAddMarco: (type: Marco['type']) => void;
+  onAddPresent: () => void;
   onClose: () => void;
 }

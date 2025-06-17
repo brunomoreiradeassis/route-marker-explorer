@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin } from 'lucide-react';
+import { MapPin, Gift } from 'lucide-react';
 import { Marco } from '../types/map';
 
 interface MapContextMenuProps {
@@ -11,6 +11,7 @@ interface MapContextMenuProps {
   lat: number;
   lng: number;
   onAddMarco: (type: Marco['type']) => void;
+  onAddPresent: () => void;
   onClose: () => void;
 }
 
@@ -20,6 +21,7 @@ const MapContextMenu: React.FC<MapContextMenuProps> = ({
   lat,
   lng,
   onAddMarco,
+  onAddPresent,
   onClose,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -62,6 +64,15 @@ const MapContextMenu: React.FC<MapContextMenuProps> = ({
               Coordenadas: {lat.toFixed(4)}, {lng.toFixed(4)}
             </p>
             <div className="border-t pt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                onClick={onAddPresent}
+              >
+                <Gift className="w-4 h-4 mr-2" />
+                Adicionar Presente
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

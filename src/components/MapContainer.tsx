@@ -1,19 +1,20 @@
-
 import React, { useState, useEffect } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import MapSidebar from './MapSidebar';
 import MapView from './MapView';
-import { Route, Marco } from '../types/map';
+import { Route, Marco, Present } from '../types/map';
 import { useToast } from '@/hooks/use-toast';
 
 const MapContainer = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [currentRoute, setCurrentRoute] = useState<Route | null>(null);
+  const [presents, setPresents] = useState<Present[]>([]);
   const { toast } = useToast();
 
   // Carrega dados do localStorage
   useEffect(() => {
     const savedRoutes = localStorage.getItem('map-routes');
+    const savedPresents = localStorage.getItem('map-presents');
     
     if (savedRoutes) {
       try {
@@ -31,13 +32,32 @@ const MapContainer = () => {
         });
       }
     }
+
+    if (savedPresents) {
+      try {
+        const parsedPresents = JSON.parse(savedPresents);
+        setPresents(parsedPresents);
+      } catch (error) {
+        console.error('Erro ao carregar presentes:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar presentes salvos",
+          variant: "destructive"
+        });
+      }
+    }
   }, []);
 
   // Salva dados no localStorage
-  const saveData = (newRoutes: Route[]) => {
+  const saveData = (newRoutes: Route[], newPresents?: Present[]) => {
     try {
       localStorage.setItem('map-routes', JSON.stringify(newRoutes));
       setRoutes(newRoutes);
+      
+      if (newPresents) {
+        localStorage.setItem('map-presents', JSON.stringify(newPresents));
+        setPresents(newPresents);
+      }
     } catch (error) {
       console.error('Erro ao salvar dados:', error);
       toast({
@@ -103,6 +123,32 @@ const MapContainer = () => {
     });
   };
 
+  const addPresent = (present: Omit<Present, 'id'>) => {
+    const newPresent: Present = {
+      ...present,
+      id: Date.now().toString(),
+      collected: false
+    };
+
+    const newPresents = [...presents, newPresent];
+    setPresents(newPresents);
+    localStorage.setItem('map-presents', JSON.stringify(newPresents));
+
+    toast({
+      title: "Presente adicionado",
+      description: `Presente "${present.name}" adicionado ao mapa!`
+    });
+  };
+
+  const collectPresent = (presentId: string) => {
+    const updatedPresents = presents.map(p => 
+      p.id === presentId ? { ...p, collected: true } : p
+    );
+    
+    setPresents(updatedPresents);
+    localStorage.setItem('map-presents', JSON.stringify(updatedPresents));
+  };
+
   const removeMarco = (marcoId: string) => {
     if (!currentRoute) return;
 
@@ -153,6 +199,9 @@ const MapContainer = () => {
           <MapView
             currentRoute={currentRoute}
             onAddMarco={addMarco}
+            presents={presents}
+            onAddPresent={addPresent}
+            onCollectPresent={collectPresent}
           />
         </SidebarInset>
       </div>
