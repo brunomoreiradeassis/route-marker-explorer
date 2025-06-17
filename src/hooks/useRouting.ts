@@ -32,7 +32,7 @@ export const useRouting = () => {
       // Prepara as coordenadas para a API
       const coordinates = sortedMarcos.map(marco => [marco.lng, marco.lat]);
       
-      // Chama a API do OpenRouteService
+      // Chama a API do OpenRouteService com configurações otimizadas para ruas
       const response = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
         method: 'POST',
         headers: {
@@ -42,15 +42,28 @@ export const useRouting = () => {
         },
         body: JSON.stringify({
           coordinates: coordinates,
-          format: 'geojson'
+          format: 'geojson',
+          options: {
+            avoid_features: ['highways'], // Evita rodovias para ficar em ruas locais
+            profile_params: {
+              restrictions: {
+                maximum_speed: 50 // Limita velocidade máxima para cálculo mais realista
+              }
+            }
+          },
+          preference: 'recommended', // Usa rotas recomendadas
+          geometry: true,
+          instructions: false,
+          elevation: false,
+          extra_info: ['waytype', 'surface'] // Informações extras sobre tipo de via
         })
       });
 
       if (!response.ok) {
-        // Fallback para linha reta se a API falhar
         console.log('API de roteamento não disponível, usando linha reta');
         const straightLineDistance = calculateStraightLineDistance(sortedMarcos);
-        const estimatedDuration = straightLineDistance * 2; // Estimativa: 2 segundos por metro
+        // Tempo estimado mais realista: 30 km/h em média urbana
+        const estimatedDuration = (straightLineDistance / 1000) * 120; // 120 segundos por km (30 km/h)
         
         const fallbackInfo: RouteInfo = {
           distance: straightLineDistance,
@@ -63,11 +76,32 @@ export const useRouting = () => {
       }
 
       const data = await response.json();
+      
+      if (!data.features || data.features.length === 0) {
+        throw new Error('Nenhuma rota encontrada');
+      }
+
       const route = data.features[0];
+      const properties = route.properties;
+      
+      // Soma todas as distâncias e durações dos segmentos
+      let totalDistance = 0;
+      let totalDuration = 0;
+      
+      if (properties.segments && properties.segments.length > 0) {
+        properties.segments.forEach((segment: any) => {
+          totalDistance += segment.distance || 0;
+          totalDuration += segment.duration || 0;
+        });
+      } else {
+        // Fallback se não houver segmentos
+        totalDistance = properties.summary?.distance || 0;
+        totalDuration = properties.summary?.duration || 0;
+      }
       
       const routeData: RouteInfo = {
-        distance: route.properties.segments[0].distance,
-        duration: route.properties.segments[0].duration,
+        distance: totalDistance,
+        duration: totalDuration,
         geometry: route.geometry.coordinates.map((coord: [number, number]) => [coord[1], coord[0]]) // Inverte lng,lat para lat,lng
       };
       
@@ -77,14 +111,15 @@ export const useRouting = () => {
     } catch (error) {
       console.error('Erro ao calcular rota:', error);
       
-      // Fallback para linha reta
+      // Fallback para linha reta com cálculo de tempo mais realista
       const sortedMarcos = [...marcos].sort((a, b) => {
         const order = { inicio: 0, meio: 1, fim: 2 };
         return order[a.type] - order[b.type];
       });
       
       const straightLineDistance = calculateStraightLineDistance(sortedMarcos);
-      const estimatedDuration = straightLineDistance * 2;
+      // Tempo estimado considerando ruas urbanas: 25 km/h em média
+      const estimatedDuration = (straightLineDistance / 1000) * 144; // 144 segundos por km (25 km/h)
       
       const fallbackInfo: RouteInfo = {
         distance: straightLineDistance,
