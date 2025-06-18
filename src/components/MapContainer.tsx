@@ -140,6 +140,17 @@ const MapContainer = () => {
     });
   };
 
+  const removePresent = (presentId: string) => {
+    const updatedPresents = presents.filter(p => p.id !== presentId);
+    setPresents(updatedPresents);
+    localStorage.setItem('map-presents', JSON.stringify(updatedPresents));
+
+    toast({
+      title: "Presente removido",
+      description: "Presente removido com sucesso!"
+    });
+  };
+
   const collectPresent = (presentId: string) => {
     const updatedPresents = presents.map(p => 
       p.id === presentId ? { ...p, collected: true } : p
@@ -190,10 +201,13 @@ const MapContainer = () => {
         <MapSidebar
           routes={routes}
           currentRoute={currentRoute}
+          presents={presents}
           onCreateRoute={createNewRoute}
           onSelectRoute={selectRoute}
           onRemoveRoute={removeRoute}
           onRemoveMarco={removeMarco}
+          onAddPresent={addPresent}
+          onRemovePresent={removePresent}
         />
         <SidebarInset className="flex-1">
           <MapView

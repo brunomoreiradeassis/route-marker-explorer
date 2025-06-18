@@ -406,6 +406,7 @@ const MapView: React.FC<MapViewProps> = ({
     onAddPresent({
       name: presentName,
       description: 'Um presente especial te espera aqui!',
+      type: 'bonus',
       lat: contextMenu.lat,
       lng: contextMenu.lng,
     });
