@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, Gift } from 'lucide-react';
+import { MapPin, Gift, Store } from 'lucide-react';
 import { Marco } from '../types/map';
 
 interface MapContextMenuProps {
@@ -12,6 +12,7 @@ interface MapContextMenuProps {
   lng: number;
   onAddMarco: (type: Marco['type']) => void;
   onAddPresent: () => void;
+  onAddCredenciado: () => void;
   onClose: () => void;
 }
 
@@ -22,6 +23,7 @@ const MapContextMenu: React.FC<MapContextMenuProps> = ({
   lng,
   onAddMarco,
   onAddPresent,
+  onAddCredenciado,
   onClose,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -72,6 +74,15 @@ const MapContextMenu: React.FC<MapContextMenuProps> = ({
               >
                 <Gift className="w-4 h-4 mr-2" />
                 Adicionar Presente
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                onClick={onAddCredenciado}
+              >
+                <Store className="w-4 h-4 mr-2" />
+                Adicionar Credenciado
               </Button>
               <Button
                 variant="ghost"

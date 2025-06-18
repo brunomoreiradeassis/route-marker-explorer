@@ -3,7 +3,21 @@ import React, { useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, MapPin, Trash2, Copy } from 'lucide-react';
-import { ElementContextMenuProps } from '../types/map';
+import { Marco, Present, Credenciado, Route } from '../types/map';
+
+interface ElementContextMenuProps {
+  x: number;
+  y: number;
+  element: {
+    type: 'marco' | 'present' | 'route' | 'credenciado';
+    id: string;
+    data: Marco | Present | Route | Credenciado;
+  };
+  onEdit: (type: 'location' | 'info') => void;
+  onDelete: () => void;
+  onClone: () => void;
+  onClose: () => void;
+}
 
 const ElementContextMenu: React.FC<ElementContextMenuProps> = ({
   x,
@@ -40,11 +54,13 @@ const ElementContextMenu: React.FC<ElementContextMenuProps> = ({
 
   const getElementName = () => {
     if (element.type === 'marco') {
-      return (element.data as any).name;
+      return (element.data as Marco).name;
     } else if (element.type === 'present') {
-      return (element.data as any).name;
+      return (element.data as Present).name;
+    } else if (element.type === 'credenciado') {
+      return (element.data as Credenciado).name;
     } else {
-      return (element.data as any).name;
+      return (element.data as Route).name;
     }
   };
 
