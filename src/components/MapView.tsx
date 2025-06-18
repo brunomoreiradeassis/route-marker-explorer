@@ -88,6 +88,13 @@ const MapView: React.FC<MapViewProps> = ({
   const { toast } = useToast();
   const { routeInfo, isLoading, calculateRoute } = useRouting();
 
+  // Função para focar em um elemento - movida para o início
+  const focusOnElement = useCallback((lat: number, lng: number, zoom: number = 18) => {
+    if (map.current) {
+      map.current.setView([lat, lng], zoom, { animate: true });
+    }
+  }, []);
+
   // Função para calcular distância entre dois pontos
   const calculateDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 6371000; // Raio da Terra em metros
@@ -602,74 +609,6 @@ const MapView: React.FC<MapViewProps> = ({
       description: "Alterações salvas com sucesso!"
     });
   }, [editModal.element, onUpdateMarco, onUpdatePresent, toast]);
-
-  // Função para focar em um elemento
-  const focusOnElement = useCallback((lat: number, lng: number, zoom: number = 18) => {
-    if (map.current) {
-      map.current.setView([lat, lng], zoom, { animate: true });
-    }
-  }, []);
-
-  const handleAddMarco = useCallback((type: Marco['type']) => {
-    if (!contextMenu) return;
-
-    const marcoName = `${getMarcoTypeName(type)} ${Date.now()}`;
-    
-    onAddMarco({
-      name: marcoName,
-      type,
-      lat: contextMenu.lat,
-      lng: contextMenu.lng,
-    });
-
-    setContextMenu(null);
-  }, [contextMenu, onAddMarco]);
-
-  const handleAddPresent = useCallback(() => {
-    if (!contextMenu) return;
-
-    const presentName = `Presente ${Date.now()}`;
-    
-    onAddPresent({
-      name: presentName,
-      description: 'Um presente especial te espera aqui!',
-      type: 'bonus',
-      lat: contextMenu.lat,
-      lng: contextMenu.lng,
-    });
-
-    setContextMenu(null);
-  }, [contextMenu, onAddPresent]);
-
-  const handleCollectPresent = useCallback((presentId: string) => {
-    onCollectPresent(presentId);
-    setNearbyPresent(null);
-    
-    toast({
-      title: "Presente coletado!",
-      description: "Você coletou um presente! Continue explorando!",
-      variant: "default"
-    });
-  }, [onCollectPresent, toast]);
-
-  const handleClosePresentAlert = useCallback(() => {
-    setNearbyPresent(null);
-  }, []);
-
-  const handleCloseStartModal = useCallback(() => {
-    setShowStartRaceModal(false);
-  }, []);
-
-  const handleStartRace = useCallback(() => {
-    setRaceStarted(true);
-    setShowStartRaceModal(false);
-    
-    toast({
-      title: "Corrida iniciada!",
-      description: "Boa sorte na sua jornada!",
-      variant: "default"
-    });
-  }, [toast]);
 
   return (
     <div className="flex-1 flex flex-col h-full">
