@@ -17,13 +17,16 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   MapPin, 
   Route as RouteIcon, 
   Plus, 
-  Trash2
+  Trash2,
+  Gift
 } from 'lucide-react';
-import { Route, Marco } from '../types/map';
+import { Route, Marco, Present } from '../types/map';
+import PresentManager from './PresentManager';
 import {
   Dialog,
   DialogContent,
@@ -38,19 +41,25 @@ import { Label } from '@/components/ui/label';
 interface MapSidebarProps {
   routes: Route[];
   currentRoute: Route | null;
+  presents: Present[];
   onCreateRoute: (name: string) => void;
   onSelectRoute: (route: Route) => void;
   onRemoveRoute: (routeId: string) => void;
   onRemoveMarco: (marcoId: string) => void;
+  onAddPresent: (present: Omit<Present, 'id'>) => void;
+  onRemovePresent: (presentId: string) => void;
 }
 
 const MapSidebar: React.FC<MapSidebarProps> = ({
   routes,
   currentRoute,
+  presents,
   onCreateRoute,
   onSelectRoute,
   onRemoveRoute,
   onRemoveMarco,
+  onAddPresent,
+  onRemovePresent,
 }) => {
   const [newRouteName, setNewRouteName] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -104,123 +113,168 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Rotas */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center justify-between">
-            <span>Rotas</span>
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-6 w-6 p-0">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Nova Rota</DialogTitle>
-                  <DialogDescription>
-                    Digite o nome da nova rota
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="routeName">Nome da Rota</Label>
-                    <Input
-                      id="routeName"
-                      value={newRouteName}
-                      onChange={(e) => setNewRouteName(e.target.value)}
-                      placeholder="Ex: Rota para o trabalho"
-                      onKeyPress={(e) => e.key === 'Enter' && handleCreateRoute()}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleCreateRoute}>Criar Rota</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <ScrollArea className="h-48">
-              <SidebarMenu>
-                {routes.map((route) => (
-                  <SidebarMenuItem key={route.id}>
-                    <div className="flex items-center justify-between w-full">
-                      <SidebarMenuButton
-                        onClick={() => onSelectRoute(route)}
-                        className={`flex-1 justify-start ${
-                          currentRoute?.id === route.id ? 'bg-accent' : ''
-                        }`}
-                        tooltip={route.name}
-                      >
-                        <RouteIcon className="w-4 h-4" style={{ color: route.color }} />
-                        <span className="truncate">{route.name}</span>
-                      </SidebarMenuButton>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onRemoveRoute(route.id)}
-                        className="h-6 w-6 p-0 text-destructive hover:text-destructive group-data-[collapsible=icon]:hidden"
-                      >
-                        <Trash2 className="w-3 h-3" />
+        <div className="group-data-[collapsible=icon]:hidden">
+          <Tabs defaultValue="routes" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="routes" className="gap-2">
+                <RouteIcon className="w-4 h-4" />
+                Rotas
+              </TabsTrigger>
+              <TabsTrigger value="presents" className="gap-2">
+                <Gift className="w-4 h-4" />
+                Presentes
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="routes" className="space-y-4 mt-4">
+              {/* Rotas */}
+              <SidebarGroup>
+                <SidebarGroupLabel className="flex items-center justify-between">
+                  <span>Rotas</span>
+                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm" variant="outline" className="h-6 w-6 p-0">
+                        <Plus className="w-4 h-4" />
                       </Button>
-                    </div>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </ScrollArea>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Marcos da Rota Atual */}
-        {currentRoute && (
-          <SidebarGroup>
-            <SidebarGroupLabel>
-              Marcos - {currentRoute.name}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <ScrollArea className="h-64">
-                {currentRoute.marcos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground p-2 group-data-[collapsible=icon]:hidden">
-                    Nenhum marco nesta rota. Clique com o botão direito no mapa para adicionar.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {currentRoute.marcos
-                      .sort((a, b) => {
-                        const order = { inicio: 0, meio: 1, fim: 2 };
-                        return order[a.type] - order[b.type];
-                      })
-                      .map((marco) => (
-                        <Card key={marco.id} className="p-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2 min-w-0">
-                              <MapPin 
-                                className={`w-4 h-4 text-white p-0.5 rounded flex-shrink-0 ${getMarcoTypeColor(marco.type)}`}
-                              />
-                              <div className="min-w-0">
-                                <p className="font-medium text-sm truncate group-data-[collapsible=icon]:hidden">{marco.name}</p>
-                                <Badge variant="secondary" className="text-xs group-data-[collapsible=icon]:hidden">
-                                  {getMarcoTypeName(marco.type)}
-                                </Badge>
-                              </div>
-                            </div>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Nova Rota</DialogTitle>
+                        <DialogDescription>
+                          Digite o nome da nova rota
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="routeName">Nome da Rota</Label>
+                          <Input
+                            id="routeName"
+                            value={newRouteName}
+                            onChange={(e) => setNewRouteName(e.target.value)}
+                            placeholder="Ex: Rota para o trabalho"
+                            onKeyPress={(e) => e.key === 'Enter' && handleCreateRoute()}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={handleCreateRoute}>Criar Rota</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <ScrollArea className="h-48">
+                    <SidebarMenu>
+                      {routes.map((route) => (
+                        <SidebarMenuItem key={route.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <SidebarMenuButton
+                              onClick={() => onSelectRoute(route)}
+                              className={`flex-1 justify-start ${
+                                currentRoute?.id === route.id ? 'bg-accent' : ''
+                              }`}
+                              tooltip={route.name}
+                            >
+                              <RouteIcon className="w-4 h-4" style={{ color: route.color }} />
+                              <span className="truncate">{route.name}</span>
+                            </SidebarMenuButton>
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => onRemoveMarco(marco.id)}
-                              className="h-6 w-6 p-0 text-destructive hover:text-destructive group-data-[collapsible=icon]:hidden"
+                              onClick={() => onRemoveRoute(route.id)}
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                             >
                               <Trash2 className="w-3 h-3" />
                             </Button>
                           </div>
-                        </Card>
+                        </SidebarMenuItem>
                       ))}
-                  </div>
-                )}
-              </ScrollArea>
+                    </SidebarMenu>
+                  </ScrollArea>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              {/* Marcos da Rota Atual */}
+              {currentRoute && (
+                <SidebarGroup>
+                  <SidebarGroupLabel>
+                    Marcos - {currentRoute.name}
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    <ScrollArea className="h-64">
+                      {currentRoute.marcos.length === 0 ? (
+                        <p className="text-sm text-muted-foreground p-2">
+                          Nenhum marco nesta rota. Clique com o botão direito no mapa para adicionar.
+                        </p>
+                      ) : (
+                        <div className="space-y-2">
+                          {currentRoute.marcos
+                            .sort((a, b) => {
+                              const order = { inicio: 0, meio: 1, fim: 2 };
+                              return order[a.type] - order[b.type];
+                            })
+                            .map((marco) => (
+                              <Card key={marco.id} className="p-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2 min-w-0">
+                                    <MapPin 
+                                      className={`w-4 h-4 text-white p-0.5 rounded flex-shrink-0 ${getMarcoTypeColor(marco.type)}`}
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="font-medium text-sm truncate">{marco.name}</p>
+                                      <Badge variant="secondary" className="text-xs">
+                                        {getMarcoTypeName(marco.type)}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => onRemoveMarco(marco.id)}
+                                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </Card>
+                            ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="presents" className="mt-4">
+              <PresentManager
+                presents={presents}
+                onAddPresent={onAddPresent}
+                onRemovePresent={onRemovePresent}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Versão colapsada - mostra apenas ícones */}
+        <div className="group-data-[collapsible=icon]:block hidden">
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Rotas">
+                    <RouteIcon className="w-4 h-4" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Presentes">
+                    <Gift className="w-4 h-4" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
-        )}
+        </div>
 
         {/* Instruções */}
         <SidebarGroup className="group-data-[collapsible=icon]:hidden">
@@ -229,10 +283,10 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
               <CardTitle className="text-sm">Como usar</CardTitle>
             </CardHeader>
             <CardContent className="text-xs space-y-2">
-              <p>• Crie uma rota clicando no botão + ao lado de "Rotas"</p>
-              <p>• Clique com o botão direito no mapa para adicionar marcos</p>
+              <p>• Crie rotas e presentes usando as abas acima</p>
+              <p>• Clique com o botão direito no mapa para adicionar marcos/presentes</p>
               <p>• Use marcos de Início, Meio e Fim para organizar sua rota</p>
-              <p>• A rota será desenhada automaticamente conectando os marcos</p>
+              <p>• Configure diferentes tipos de presentes na aba Presentes</p>
               <p>• Mapa powered by OpenStreetMap</p>
             </CardContent>
           </Card>

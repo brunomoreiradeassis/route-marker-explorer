@@ -7,13 +7,17 @@ export interface Marco {
   lng: number;
 }
 
+export type PresentType = 'moeda' | 'gema' | 'pocao' | 'equipamento' | 'chave' | 'bonus';
+
 export interface Present {
   id: string;
   name: string;
   description: string;
+  type: PresentType;
   lat: number;
   lng: number;
   collected?: boolean;
+  value?: number;
 }
 
 export interface Route {

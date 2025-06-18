@@ -432,6 +432,17 @@ const MapView: React.FC<MapViewProps> = ({
     setShowStartRaceModal(false);
   }, []);
 
+  const handleStartRace = useCallback(() => {
+    setRaceStarted(true);
+    setShowStartRaceModal(false);
+    
+    toast({
+      title: "Corrida iniciada!",
+      description: "Boa sorte na sua jornada!",
+      variant: "default"
+    });
+  }, [toast]);
+
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Barra de busca */}
