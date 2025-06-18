@@ -111,6 +111,68 @@ const MapView: React.FC<MapViewProps> = ({
     return R * c;
   }, []);
 
+  // Handler functions
+  const handleAddMarco = useCallback((type: Marco['type']) => {
+    if (!contextMenu) return;
+
+    const marcoName = `${getMarcoTypeName(type)} ${Date.now()}`;
+    
+    onAddMarco({
+      name: marcoName,
+      type,
+      lat: contextMenu.lat,
+      lng: contextMenu.lng,
+    });
+
+    setContextMenu(null);
+  }, [contextMenu, onAddMarco]);
+
+  const handleAddPresent = useCallback(() => {
+    if (!contextMenu) return;
+
+    const presentName = `Presente ${Date.now()}`;
+    
+    onAddPresent({
+      name: presentName,
+      description: 'Um presente especial te espera aqui!',
+      type: 'bonus',
+      lat: contextMenu.lat,
+      lng: contextMenu.lng,
+    });
+
+    setContextMenu(null);
+  }, [contextMenu, onAddPresent]);
+
+  const handleCollectPresent = useCallback((presentId: string) => {
+    onCollectPresent(presentId);
+    setNearbyPresent(null);
+    
+    toast({
+      title: "Presente coletado!",
+      description: "Você coletou um presente! Continue explorando!",
+      variant: "default"
+    });
+  }, [onCollectPresent, toast]);
+
+  const handleClosePresentAlert = useCallback(() => {
+    setNearbyPresent(null);
+  }, []);
+
+  const handleCloseStartModal = useCallback(() => {
+    setShowStartRaceModal(false);
+  }, []);
+
+  const handleStartRace = useCallback(() => {
+    setRaceStarted(true);
+    setShowStartRaceModal(false);
+    
+    toast({
+      title: "Corrida iniciada!",
+      description: "Boa sorte na sua jornada!",
+      variant: "default"
+    });
+  }, [toast]);
+
   // Função para obter URL do tile layer
   const getTileLayerUrl = (type: MapTileType): { url: string; attribution: string; maxZoom: number } => {
     switch (type) {
