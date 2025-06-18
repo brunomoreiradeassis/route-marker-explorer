@@ -11,17 +11,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Marco, Present, PresentType } from '../types/map';
+import { Marco, Present, Credenciado, PresentType, CredenciadoType } from '../types/map';
 
 interface EditElementModalProps {
   isOpen: boolean;
   onClose: () => void;
   element: {
-    type: 'marco' | 'present';
-    data: Marco | Present;
+    type: 'marco' | 'present' | 'credenciado';
+    data: Marco | Present | Credenciado;
   } | null;
   editType: 'location' | 'info';
-  onSave: (updatedElement: Marco | Present) => void;
+  onSave: (updatedElement: Marco | Present | Credenciado) => void;
 }
 
 const EditElementModal: React.FC<EditElementModalProps> = ({
@@ -61,12 +61,35 @@ const EditElementModal: React.FC<EditElementModalProps> = ({
     { value: 'fim', label: 'Fim' },
   ];
 
+  const credenciadoTypes: { value: CredenciadoType; label: string }[] = [
+    { value: 'restaurante', label: 'Restaurante' },
+    { value: 'posto', label: 'Posto de Gasolina' },
+    { value: 'farmacia', label: 'Farmácia' },
+    { value: 'supermercado', label: 'Supermercado' },
+    { value: 'hotel', label: 'Hotel' },
+    { value: 'pousada', label: 'Pousada' },
+    { value: 'academia', label: 'Academia' },
+  ];
+
+  const getElementTypeName = () => {
+    switch (element.type) {
+      case 'marco':
+        return 'Marco';
+      case 'present':
+        return 'Presente';
+      case 'credenciado':
+        return 'Credenciado';
+      default:
+        return 'Elemento';
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
-            {editType === 'location' ? 'Editar Localização' : 'Editar Informações'} - {element.type === 'marco' ? 'Marco' : 'Presente'}
+            {editType === 'location' ? 'Editar Localização' : 'Editar Informações'} - {getElementTypeName()}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -163,6 +186,64 @@ const EditElementModal: React.FC<EditElementModalProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
+              )}
+
+              {element.type === 'credenciado' && (
+                <>
+                  <div>
+                    <Label htmlFor="description">Descrição</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description || ''}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="type">Tipo</Label>
+                    <Select
+                      value={formData.type || 'restaurante'}
+                      onValueChange={(value) => setFormData({ ...formData, type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {credenciadoTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="discount">Desconto</Label>
+                    <Input
+                      id="discount"
+                      value={formData.discount || ''}
+                      onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
+                      placeholder="Ex: 10% de desconto"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone">Telefone</Label>
+                    <Input
+                      id="phone"
+                      value={formData.phone || ''}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="Ex: (11) 99999-9999"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="address">Endereço</Label>
+                    <Input
+                      id="address"
+                      value={formData.address || ''}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Ex: Rua das Flores, 123"
+                    />
+                  </div>
+                </>
               )}
             </>
           )}
