@@ -2,19 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import MapSidebar from './MapSidebar';
 import MapView from './MapView';
-import { Route, Marco, Present } from '../types/map';
+import { Route, Marco, Present, Credenciado } from '../types/map';
 import { useToast } from '@/hooks/use-toast';
 
 const MapContainer = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [currentRoute, setCurrentRoute] = useState<Route | null>(null);
   const [presents, setPresents] = useState<Present[]>([]);
+  const [credenciados, setCredenciados] = useState<Credenciado[]>([]);
   const { toast } = useToast();
 
   // Carrega dados do localStorage
   useEffect(() => {
     const savedRoutes = localStorage.getItem('map-routes');
     const savedPresents = localStorage.getItem('map-presents');
+    const savedCredenciados = localStorage.getItem('map-credenciados');
     
     if (savedRoutes) {
       try {
@@ -42,6 +44,20 @@ const MapContainer = () => {
         toast({
           title: "Erro",
           description: "Erro ao carregar presentes salvos",
+          variant: "destructive"
+        });
+      }
+    }
+
+    if (savedCredenciados) {
+      try {
+        const parsedCredenciados = JSON.parse(savedCredenciados);
+        setCredenciados(parsedCredenciados);
+      } catch (error) {
+        console.error('Erro ao carregar credenciados:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar credenciados salvos",
           variant: "destructive"
         });
       }
@@ -148,6 +164,33 @@ const MapContainer = () => {
     toast({
       title: "Presente removido",
       description: "Presente removido com sucesso!"
+    });
+  };
+
+  const addCredenciado = (credenciado: Omit<Credenciado, 'id'>) => {
+    const newCredenciado: Credenciado = {
+      ...credenciado,
+      id: Date.now().toString(),
+    };
+
+    const newCredenciados = [...credenciados, newCredenciado];
+    setCredenciados(newCredenciados);
+    localStorage.setItem('map-credenciados', JSON.stringify(newCredenciados));
+
+    toast({
+      title: "Credenciado adicionado",
+      description: `Estabelecimento "${credenciado.name}" adicionado ao mapa!`
+    });
+  };
+
+  const removeCredenciado = (credenciadoId: string) => {
+    const updatedCredenciados = credenciados.filter(c => c.id !== credenciadoId);
+    setCredenciados(updatedCredenciados);
+    localStorage.setItem('map-credenciados', JSON.stringify(updatedCredenciados));
+
+    toast({
+      title: "Credenciado removido",
+      description: "Estabelecimento removido com sucesso!"
     });
   };
 
@@ -278,19 +321,24 @@ const MapContainer = () => {
           routes={routes}
           currentRoute={currentRoute}
           presents={presents}
+          credenciados={credenciados}
           onCreateRoute={createNewRoute}
           onSelectRoute={selectRoute}
           onRemoveRoute={removeRoute}
           onRemoveMarco={removeMarco}
           onAddPresent={addPresent}
           onRemovePresent={removePresent}
+          onAddCredenciado={addCredenciado}
+          onRemoveCredenciado={removeCredenciado}
         />
         <SidebarInset className="flex-1">
           <MapView
             currentRoute={currentRoute}
             onAddMarco={addMarco}
             presents={presents}
+            credenciados={credenciados}
             onAddPresent={addPresent}
+            onAddCredenciado={addCredenciado}
             onCollectPresent={collectPresent}
             onUpdateMarco={updateMarco}
             onUpdatePresent={updatePresent}
