@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Route, Marco, Present, MapTileType } from '../types/map';
+import { Route, Marco, Present, Credenciado, MapTileType } from '../types/map';
 import MapContextMenu from './MapContextMenu';
 import ElementContextMenu from './ElementContextMenu';
 import RouteInfoCard from './RouteInfoCard';
@@ -25,28 +25,38 @@ interface MapViewProps {
   currentRoute: Route | null;
   onAddMarco: (marco: Omit<Marco, 'id'>) => void;
   presents: Present[];
+  credenciados: Credenciado[];
   onAddPresent: (present: Omit<Present, 'id'>) => void;
+  onAddCredenciado: (credenciado: Omit<Credenciado, 'id'>) => void;
   onCollectPresent: (presentId: string) => void;
   onUpdateMarco?: (marco: Marco) => void;
   onUpdatePresent?: (present: Present) => void;
+  onUpdateCredenciado?: (credenciado: Credenciado) => void;
   onDeleteMarco?: (marcoId: string) => void;
   onDeletePresent?: (presentId: string) => void;
+  onDeleteCredenciado?: (credenciadoId: string) => void;
   onCloneMarco?: (marco: Marco) => void;
   onClonePresent?: (present: Present) => void;
+  onCloneCredenciado?: (credenciado: Credenciado) => void;
 }
 
 const MapView: React.FC<MapViewProps> = ({
   currentRoute,
   onAddMarco,
   presents,
+  credenciados,
   onAddPresent,
+  onAddCredenciado,
   onCollectPresent,
   onUpdateMarco,
   onUpdatePresent,
+  onUpdateCredenciado,
   onDeleteMarco,
   onDeletePresent,
+  onDeleteCredenciado,
   onCloneMarco,
   onClonePresent,
+  onCloneCredenciado,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -61,14 +71,15 @@ const MapView: React.FC<MapViewProps> = ({
     x: number;
     y: number;
     element: {
-      type: 'marco' | 'present' | 'route';
+      type: 'marco' | 'present' | 'route' | 'credenciado';
       id: string;
-      data: Marco | Present | Route;
+      data: Marco | Present | Route | Credenciado;
     };
   } | null>(null);
   const [currentLocationMarker, setCurrentLocationMarker] = useState<L.Marker | null>(null);
   const [routeMarkers, setRouteMarkers] = useState<L.Marker[]>([]);
   const [presentMarkers, setPresentMarkers] = useState<L.Marker[]>([]);
+  const [credenciadoMarkers, setCredenciadoMarkers] = useState<L.Marker[]>([]);
   const [routePath, setRoutePath] = useState<L.Polyline | null>(null);
   const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [showStartRaceModal, setShowStartRaceModal] = useState(false);
@@ -78,7 +89,7 @@ const MapView: React.FC<MapViewProps> = ({
   const [tileLayer, setTileLayer] = useState<L.TileLayer | null>(null);
   const [editModal, setEditModal] = useState<{
     isOpen: boolean;
-    element: { type: 'marco' | 'present'; data: Marco | Present } | null;
+    element: { type: 'marco' | 'present' | 'credenciado'; data: Marco | Present | Credenciado } | null;
     editType: 'location' | 'info';
   }>({
     isOpen: false,
@@ -142,6 +153,23 @@ const MapView: React.FC<MapViewProps> = ({
 
     setContextMenu(null);
   }, [contextMenu, onAddPresent]);
+
+  const handleAddCredenciado = useCallback(() => {
+    if (!contextMenu) return;
+
+    const credenciadoName = `Estabelecimento ${Date.now()}`;
+    
+    onAddCredenciado({
+      name: credenciadoName,
+      description: 'Um estabelecimento credenciado!',
+      type: 'restaurante',
+      lat: contextMenu.lat,
+      lng: contextMenu.lng,
+      discount: '10% de desconto',
+    });
+
+    setContextMenu(null);
+  }, [contextMenu, onAddCredenciado]);
 
   const handleCollectPresent = useCallback((presentId: string) => {
     onCollectPresent(presentId);
@@ -333,12 +361,16 @@ const MapView: React.FC<MapViewProps> = ({
     if (!map.current) return;
 
     // Remove marcadores existentes de presentes
-    presentMarkers.forEach(marker => marker.remove());
+    presentMarkers.forEach(marker => {
+      map.current?.removeLayer(marker);
+    });
 
     // Adiciona novos marcadores de presentes
     const newPresentMarkers: L.Marker[] = [];
     presents.forEach((present) => {
-      const markerColor = present.collected ? '#94a3b8' : '#eab308'; // cinza se coletado, amarelo se não
+      console.log('Adicionando presente:', present.name, present.lat, present.lng);
+      
+      const markerColor = present.collected ? '#94a3b8' : '#eab308';
       const marker = L.marker([present.lat, present.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
@@ -375,6 +407,65 @@ const MapView: React.FC<MapViewProps> = ({
 
     setPresentMarkers(newPresentMarkers);
   }, [presents, focusOnElement]);
+
+  // Atualiza marcadores de credenciados
+  useEffect(() => {
+    if (!map.current) return;
+
+    // Remove marcadores existentes de credenciados
+    credenciadoMarkers.forEach(marker => {
+      map.current?.removeLayer(marker);
+    });
+
+    // Adiciona novos marcadores de credenciados
+    const newCredenciadoMarkers: L.Marker[] = [];
+    credenciados.forEach((credenciado) => {
+      const markerColor = getCredenciadoColor(credenciado.type);
+      const markerIcon = getCredenciadoIcon(credenciado.type);
+      
+      const marker = L.marker([credenciado.lat, credenciado.lng], {
+        icon: L.divIcon({
+          className: 'custom-marker',
+          html: `<div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">${markerIcon}</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
+        })
+      }).addTo(map.current!);
+
+      const popupContent = `
+        <b>${credenciado.name}</b><br>
+        ${credenciado.description}<br>
+        ${credenciado.discount ? `<span style="color: green; font-weight: bold;">${credenciado.discount}</span><br>` : ''}
+        ${credenciado.phone ? `📞 ${credenciado.phone}<br>` : ''}
+        ${credenciado.address ? `📍 ${credenciado.address}` : ''}
+      `;
+      
+      marker.bindPopup(popupContent);
+      
+      marker.on('click', () => {
+        focusOnElement(credenciado.lat, credenciado.lng);
+      });
+
+      marker.on('contextmenu', (e) => {
+        const containerPoint = map.current!.latLngToContainerPoint(e.latlng);
+        setElementContextMenu({
+          x: containerPoint.x,
+          y: containerPoint.y,
+          element: {
+            type: 'credenciado',
+            id: credenciado.id,
+            data: credenciado
+          }
+        });
+        setContextMenu(null);
+        L.DomEvent.stopPropagation(e);
+      });
+
+      newCredenciadoMarkers.push(marker);
+    });
+
+    setCredenciadoMarkers(newCredenciadoMarkers);
+  }, [credenciados, focusOnElement]);
 
   // Atualiza marcadores e rota quando a rota atual muda
   useEffect(() => {
@@ -515,6 +606,48 @@ const MapView: React.FC<MapViewProps> = ({
     }
   };
 
+  const getCredenciadoColor = (type: string) => {
+    switch (type) {
+      case 'restaurante':
+        return '#f97316';
+      case 'posto':
+        return '#eab308';
+      case 'farmacia':
+        return '#22c55e';
+      case 'supermercado':
+        return '#3b82f6';
+      case 'hotel':
+        return '#8b5cf6';
+      case 'pousada':
+        return '#ec4899';
+      case 'academia':
+        return '#ef4444';
+      default:
+        return '#6b7280';
+    }
+  };
+
+  const getCredenciadoIcon = (type: string) => {
+    switch (type) {
+      case 'restaurante':
+        return '🍽️';
+      case 'posto':
+        return '⛽';
+      case 'farmacia':
+        return '💊';
+      case 'supermercado':
+        return '🛒';
+      case 'hotel':
+        return '🏨';
+      case 'pousada':
+        return '🏠';
+      case 'academia':
+        return '💪';
+      default:
+        return '🏪';
+    }
+  };
+
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       toast({
@@ -612,8 +745,8 @@ const MapView: React.FC<MapViewProps> = ({
       setEditModal({
         isOpen: true,
         element: {
-          type: elementContextMenu.element.type as 'marco' | 'present',
-          data: elementContextMenu.element.data as Marco | Present
+          type: elementContextMenu.element.type as 'marco' | 'present' | 'credenciado',
+          data: elementContextMenu.element.data as Marco | Present | Credenciado
         },
         editType: type
       });
@@ -630,15 +763,17 @@ const MapView: React.FC<MapViewProps> = ({
       onDeleteMarco(element.id);
     } else if (element.type === 'present' && onDeletePresent) {
       onDeletePresent(element.id);
+    } else if (element.type === 'credenciado' && onDeleteCredenciado) {
+      onDeleteCredenciado(element.id);
     }
     
     setElementContextMenu(null);
     
     toast({
-      title: `${element.type === 'marco' ? 'Marco' : 'Presente'} removido`,
+      title: `${element.type === 'marco' ? 'Marco' : element.type === 'present' ? 'Presente' : 'Credenciado'} removido`,
       description: "Item removido com sucesso!"
     });
-  }, [elementContextMenu, onDeleteMarco, onDeletePresent, toast]);
+  }, [elementContextMenu, onDeleteMarco, onDeletePresent, onDeleteCredenciado, toast]);
 
   const handleElementClone = useCallback(() => {
     if (!elementContextMenu) return;
@@ -649,28 +784,32 @@ const MapView: React.FC<MapViewProps> = ({
       onCloneMarco(element.data as Marco);
     } else if (element.type === 'present' && onClonePresent) {
       onClonePresent(element.data as Present);
+    } else if (element.type === 'credenciado' && onCloneCredenciado) {
+      onCloneCredenciado(element.data as Credenciado);
     }
     
     setElementContextMenu(null);
     
     toast({
-      title: `${element.type === 'marco' ? 'Marco' : 'Presente'} clonado`,
+      title: `${element.type === 'marco' ? 'Marco' : element.type === 'present' ? 'Presente' : 'Credenciado'} clonado`,
       description: "Item clonado com sucesso!"
     });
-  }, [elementContextMenu, onCloneMarco, onClonePresent, toast]);
+  }, [elementContextMenu, onCloneMarco, onClonePresent, onCloneCredenciado, toast]);
 
-  const handleSaveElement = useCallback((updatedElement: Marco | Present) => {
+  const handleSaveElement = useCallback((updatedElement: Marco | Present | Credenciado) => {
     if (editModal.element?.type === 'marco' && onUpdateMarco) {
       onUpdateMarco(updatedElement as Marco);
     } else if (editModal.element?.type === 'present' && onUpdatePresent) {
       onUpdatePresent(updatedElement as Present);
+    } else if (editModal.element?.type === 'credenciado' && onUpdateCredenciado) {
+      onUpdateCredenciado(updatedElement as Credenciado);
     }
     
     toast({
       title: "Elemento atualizado",
       description: "Alterações salvas com sucesso!"
     });
-  }, [editModal.element, onUpdateMarco, onUpdatePresent, toast]);
+  }, [editModal.element, onUpdateMarco, onUpdatePresent, onUpdateCredenciado, toast]);
 
   return (
     <div className="flex-1 flex flex-col h-full">
@@ -720,6 +859,7 @@ const MapView: React.FC<MapViewProps> = ({
             lng={contextMenu.lng}
             onAddMarco={handleAddMarco}
             onAddPresent={handleAddPresent}
+            onAddCredenciado={handleAddCredenciado}
             onClose={() => setContextMenu(null)}
           />
         )}

@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Map, Satellite, Mountain, Moon, Palette } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Map, Satellite, Mountain, Moon, Palette, Minimize2, Maximize2 } from 'lucide-react';
 import { MapTileType } from '../types/map';
 
 interface MapTypeSelectorProps {
@@ -14,6 +14,8 @@ const MapTypeSelector: React.FC<MapTypeSelectorProps> = ({
   currentType,
   onTypeChange,
 }) => {
+  const [isMinimized, setIsMinimized] = useState(false);
+
   const mapTypes = [
     {
       type: 'openstreetmap' as MapTileType,
@@ -47,10 +49,42 @@ const MapTypeSelector: React.FC<MapTypeSelectorProps> = ({
     }
   ];
 
+  if (isMinimized) {
+    return (
+      <Card className="w-auto">
+        <CardHeader className="p-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Mapa</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMinimized(false)}
+              className="h-6 w-6 p-0"
+            >
+              <Maximize2 className="w-3 h-3" />
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full">
-      <CardContent className="p-3">
-        <h3 className="text-sm font-medium mb-3">Tipo de Mapa</h3>
+      <CardHeader className="p-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium">Tipo de Mapa</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsMinimized(true)}
+            className="h-6 w-6 p-0"
+          >
+            <Minimize2 className="w-3 h-3" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
         <div className="space-y-1">
           {mapTypes.map((mapType) => {
             const Icon = mapType.icon;

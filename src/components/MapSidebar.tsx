@@ -23,10 +23,12 @@ import {
   Route as RouteIcon, 
   Plus, 
   Trash2,
-  Gift
+  Gift,
+  Store
 } from 'lucide-react';
-import { Route, Marco, Present } from '../types/map';
+import { Route, Marco, Present, Credenciado } from '../types/map';
 import PresentManager from './PresentManager';
+import CredenciadoManager from './CredenciadoManager';
 import {
   Dialog,
   DialogContent,
@@ -42,24 +44,30 @@ interface MapSidebarProps {
   routes: Route[];
   currentRoute: Route | null;
   presents: Present[];
+  credenciados: Credenciado[];
   onCreateRoute: (name: string) => void;
   onSelectRoute: (route: Route) => void;
   onRemoveRoute: (routeId: string) => void;
   onRemoveMarco: (marcoId: string) => void;
   onAddPresent: (present: Omit<Present, 'id'>) => void;
   onRemovePresent: (presentId: string) => void;
+  onAddCredenciado: (credenciado: Omit<Credenciado, 'id'>) => void;
+  onRemoveCredenciado: (credenciadoId: string) => void;
 }
 
 const MapSidebar: React.FC<MapSidebarProps> = ({
   routes,
   currentRoute,
   presents,
+  credenciados,
   onCreateRoute,
   onSelectRoute,
   onRemoveRoute,
   onRemoveMarco,
   onAddPresent,
   onRemovePresent,
+  onAddCredenciado,
+  onRemoveCredenciado,
 }) => {
   const [newRouteName, setNewRouteName] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -115,7 +123,7 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
       <SidebarContent>
         <div className="group-data-[collapsible=icon]:hidden">
           <Tabs defaultValue="routes" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="routes" className="gap-2">
                 <RouteIcon className="w-4 h-4" />
                 Rotas
@@ -123,6 +131,10 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
               <TabsTrigger value="presents" className="gap-2">
                 <Gift className="w-4 h-4" />
                 Presentes
+              </TabsTrigger>
+              <TabsTrigger value="credenciados" className="gap-2">
+                <Store className="w-4 h-4" />
+                Credenciados
               </TabsTrigger>
             </TabsList>
             
@@ -253,6 +265,14 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                 onRemovePresent={onRemovePresent}
               />
             </TabsContent>
+
+            <TabsContent value="credenciados" className="mt-4">
+              <CredenciadoManager
+                credenciados={credenciados}
+                onAddCredenciado={onAddCredenciado}
+                onRemoveCredenciado={onRemoveCredenciado}
+              />
+            </TabsContent>
           </Tabs>
         </div>
 
@@ -271,6 +291,11 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                     <Gift className="w-4 h-4" />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Credenciados">
+                    <Store className="w-4 h-4" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
@@ -283,10 +308,10 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
               <CardTitle className="text-sm">Como usar</CardTitle>
             </CardHeader>
             <CardContent className="text-xs space-y-2">
-              <p>• Crie rotas e presentes usando as abas acima</p>
-              <p>• Clique com o botão direito no mapa para adicionar marcos/presentes</p>
+              <p>• Crie rotas, presentes e credenciados usando as abas acima</p>
+              <p>• Clique com o botão direito no mapa para adicionar elementos</p>
               <p>• Use marcos de Início, Meio e Fim para organizar sua rota</p>
-              <p>• Configure diferentes tipos de presentes na aba Presentes</p>
+              <p>• Configure presentes e estabelecimentos credenciados</p>
               <p>• Mapa powered by OpenStreetMap</p>
             </CardContent>
           </Card>
