@@ -12,6 +12,7 @@ import EditElementModal from './EditElementModal';
 import { useToast } from '@/hooks/use-toast';
 import { useRouting } from '../hooks/useRouting';
 import L from 'leaflet';
+import ProximityAlert from './ProximityAlert';
 
 // Fix for default markers in Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -96,6 +97,16 @@ const MapView: React.FC<MapViewProps> = ({
     element: null,
     editType: 'info'
   });
+  
+  // New state for proximity alerts
+  const [proximityAlerts, setProximityAlerts] = useState<{
+    type: 'marco' | 'present' | 'credenciado';
+    name: string;
+    distance: number;
+    id: string;
+    subtype?: string;
+  }[]>([]);
+  
   const { toast } = useToast();
   const { routeInfo, isLoading, calculateRoute } = useRouting();
 
@@ -253,6 +264,91 @@ const MapView: React.FC<MapViewProps> = ({
 
     setTileLayer(newTileLayer);
   }, [mapTileType]);
+
+  // Verifica proximidade com todos os elementos
+  useEffect(() => {
+    if (!currentLocation) return;
+    
+    const newProximityAlerts: {
+      type: 'marco' | 'present' | 'credenciado';
+      name: string;
+      distance: number;
+      id: string;
+      subtype?: string;
+    }[] = [];
+
+    // Check proximity to marcos
+    if (currentRoute) {
+      currentRoute.marcos.forEach(marco => {
+        const distance = calculateDistance(
+          currentLocation.lat,
+          currentLocation.lng,
+          marco.lat,
+          marco.lng
+        );
+
+        // Add alerts for different distances: 5km, 2km, 1km, 200m
+        if (distance <= 5000) {
+          newProximityAlerts.push({
+            type: 'marco',
+            name: marco.name,
+            distance: distance,
+            id: marco.id,
+            subtype: marco.type
+          });
+        }
+      });
+    }
+
+    // Check proximity to presents
+    presents.forEach(present => {
+      if (present.collected) return;
+      
+      const distance = calculateDistance(
+        currentLocation.lat,
+        currentLocation.lng,
+        present.lat,
+        present.lng
+      );
+      
+      if (distance <= 5000) {
+        newProximityAlerts.push({
+          type: 'present',
+          name: present.name,
+          distance: distance,
+          id: present.id,
+          subtype: present.type
+        });
+      }
+    });
+
+    // Check proximity to credenciados
+    credenciados.forEach(credenciado => {
+      const distance = calculateDistance(
+        currentLocation.lat,
+        currentLocation.lng,
+        credenciado.lat,
+        credenciado.lng
+      );
+      
+      if (distance <= 5000) {
+        newProximityAlerts.push({
+          type: 'credenciado',
+          name: credenciado.name,
+          distance: distance,
+          id: credenciado.id,
+          subtype: credenciado.type
+        });
+      }
+    });
+    
+    // Sort by distance
+    newProximityAlerts.sort((a, b) => a.distance - b.distance);
+    
+    // Update state
+    setProximityAlerts(newProximityAlerts);
+    
+  }, [currentLocation, currentRoute, presents, credenciados, calculateDistance]);
 
   // Verifica proximidade com presentes
   useEffect(() => {
@@ -708,8 +804,20 @@ const MapView: React.FC<MapViewProps> = ({
     if (!searchValue.trim()) return;
 
     try {
+      // Check if the search value looks like a CEP (Brazilian postal code)
+      const isCEP = /^[0-9]{5}-?[0-9]{3}$/.test(searchValue);
+      
+      let queryString = searchValue;
+      
+      // If it's a CEP, add "Brazil" to make the search more precise
+      if (isCEP) {
+        // Format CEP if needed
+        const formattedCEP = searchValue.replace(/[^0-9]/g, '');
+        queryString = `${formattedCEP}, Brazil`;
+      }
+      
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchValue)}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryString)}&limit=1`
       );
 
       const data = await response.json();
@@ -817,7 +925,7 @@ const MapView: React.FC<MapViewProps> = ({
       <div className="p-2 sm:p-4 border-b bg-background shrink-0">
         <div className="flex flex-col sm:flex-row gap-2 w-full">
           <Input
-            placeholder="Digite um endereço para buscar..."
+            placeholder="Digite um endereço ou CEP para buscar..."
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && searchAddress()}
@@ -849,6 +957,13 @@ const MapView: React.FC<MapViewProps> = ({
             onTypeChange={setMapTileType}
           />
         </div>
+        
+        {/* Proximity Alerts */}
+        {proximityAlerts.length > 0 && (
+          <div className="absolute top-20 right-4 z-10 max-h-[60vh] overflow-y-auto w-64">
+            <ProximityAlert alerts={proximityAlerts} onFocus={(lat, lng) => focusOnElement(lat, lng)} />
+          </div>
+        )}
         
         {/* Menu de contexto do mapa */}
         {contextMenu && (

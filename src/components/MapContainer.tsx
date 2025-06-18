@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import MapSidebar from './MapSidebar';
@@ -65,7 +66,7 @@ const MapContainer = () => {
   }, []);
 
   // Salva dados no localStorage
-  const saveData = (newRoutes: Route[], newPresents?: Present[]) => {
+  const saveData = (newRoutes: Route[], newPresents?: Present[], newCredenciados?: Credenciado[]) => {
     try {
       localStorage.setItem('map-routes', JSON.stringify(newRoutes));
       setRoutes(newRoutes);
@@ -73,6 +74,11 @@ const MapContainer = () => {
       if (newPresents) {
         localStorage.setItem('map-presents', JSON.stringify(newPresents));
         setPresents(newPresents);
+      }
+      
+      if (newCredenciados) {
+        localStorage.setItem('map-credenciados', JSON.stringify(newCredenciados));
+        setCredenciados(newCredenciados);
       }
     } catch (error) {
       console.error('Erro ao salvar dados:', error);
@@ -147,8 +153,7 @@ const MapContainer = () => {
     };
 
     const newPresents = [...presents, newPresent];
-    setPresents(newPresents);
-    localStorage.setItem('map-presents', JSON.stringify(newPresents));
+    saveData(routes, newPresents);
 
     toast({
       title: "Presente adicionado",
@@ -158,8 +163,7 @@ const MapContainer = () => {
 
   const removePresent = (presentId: string) => {
     const updatedPresents = presents.filter(p => p.id !== presentId);
-    setPresents(updatedPresents);
-    localStorage.setItem('map-presents', JSON.stringify(updatedPresents));
+    saveData(routes, updatedPresents);
 
     toast({
       title: "Presente removido",
@@ -174,8 +178,7 @@ const MapContainer = () => {
     };
 
     const newCredenciados = [...credenciados, newCredenciado];
-    setCredenciados(newCredenciados);
-    localStorage.setItem('map-credenciados', JSON.stringify(newCredenciados));
+    saveData(routes, presents, newCredenciados);
 
     toast({
       title: "Credenciado adicionado",
@@ -185,8 +188,7 @@ const MapContainer = () => {
 
   const removeCredenciado = (credenciadoId: string) => {
     const updatedCredenciados = credenciados.filter(c => c.id !== credenciadoId);
-    setCredenciados(updatedCredenciados);
-    localStorage.setItem('map-credenciados', JSON.stringify(updatedCredenciados));
+    saveData(routes, presents, updatedCredenciados);
 
     toast({
       title: "Credenciado removido",
@@ -199,8 +201,7 @@ const MapContainer = () => {
       p.id === presentId ? { ...p, collected: true } : p
     );
     
-    setPresents(updatedPresents);
-    localStorage.setItem('map-presents', JSON.stringify(updatedPresents));
+    saveData(routes, updatedPresents);
   };
 
   const removeMarco = (marcoId: string) => {
@@ -261,8 +262,15 @@ const MapContainer = () => {
       p.id === updatedPresent.id ? updatedPresent : p
     );
     
-    setPresents(updatedPresents);
-    localStorage.setItem('map-presents', JSON.stringify(updatedPresents));
+    saveData(routes, updatedPresents);
+  };
+
+  const updateCredenciado = (updatedCredenciado: Credenciado) => {
+    const updatedCredenciados = credenciados.map(c => 
+      c.id === updatedCredenciado.id ? updatedCredenciado : c
+    );
+    
+    saveData(routes, presents, updatedCredenciados);
   };
 
   const cloneMarco = (marco: Marco) => {
@@ -305,12 +313,29 @@ const MapContainer = () => {
     };
 
     const newPresents = [...presents, newPresent];
-    setPresents(newPresents);
-    localStorage.setItem('map-presents', JSON.stringify(newPresents));
+    saveData(routes, newPresents);
 
     toast({
       title: "Presente clonado",
       description: `Presente "${newPresent.name}" criado com sucesso!`
+    });
+  };
+
+  const cloneCredenciado = (credenciado: Credenciado) => {
+    const newCredenciado: Credenciado = {
+      ...credenciado,
+      id: Date.now().toString(),
+      name: `${credenciado.name} (Cópia)`,
+      lat: credenciado.lat + 0.0001, // Pequeno offset para não sobrepor
+      lng: credenciado.lng + 0.0001
+    };
+
+    const newCredenciados = [...credenciados, newCredenciado];
+    saveData(routes, presents, newCredenciados);
+
+    toast({
+      title: "Credenciado clonado",
+      description: `Credenciado "${newCredenciado.name}" criado com sucesso!`
     });
   };
 
@@ -342,10 +367,13 @@ const MapContainer = () => {
             onCollectPresent={collectPresent}
             onUpdateMarco={updateMarco}
             onUpdatePresent={updatePresent}
+            onUpdateCredenciado={updateCredenciado}
             onDeleteMarco={removeMarco}
             onDeletePresent={removePresent}
+            onDeleteCredenciado={removeCredenciado}
             onCloneMarco={cloneMarco}
             onClonePresent={clonePresent}
+            onCloneCredenciado={cloneCredenciado}
           />
         </SidebarInset>
       </div>
