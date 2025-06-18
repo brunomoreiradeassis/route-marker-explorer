@@ -36,3 +36,19 @@ export interface MapContextMenuProps {
   onAddPresent: () => void;
   onClose: () => void;
 }
+
+export type MapTileType = 'openstreetmap' | 'satellite' | 'terrain' | 'dark' | 'watercolor';
+
+export interface ElementContextMenuProps {
+  x: number;
+  y: number;
+  element: {
+    type: 'marco' | 'present' | 'route';
+    id: string;
+    data: Marco | Present | Route;
+  };
+  onEdit: (type: 'location' | 'info') => void;
+  onDelete: () => void;
+  onClone: () => void;
+  onClose: () => void;
+}

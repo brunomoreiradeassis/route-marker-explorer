@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Route, Marco, Present } from '../types/map';
+import { Route, Marco, Present, MapTileType } from '../types/map';
 import MapContextMenu from './MapContextMenu';
+import ElementContextMenu from './ElementContextMenu';
 import RouteInfoCard from './RouteInfoCard';
 import StartRaceModal from './StartRaceModal';
 import PresentAlert from './PresentAlert';
+import MapTypeSelector from './MapTypeSelector';
+import EditElementModal from './EditElementModal';
 import { useToast } from '@/hooks/use-toast';
 import { useRouting } from '../hooks/useRouting';
 import L from 'leaflet';
@@ -24,6 +27,12 @@ interface MapViewProps {
   presents: Present[];
   onAddPresent: (present: Omit<Present, 'id'>) => void;
   onCollectPresent: (presentId: string) => void;
+  onUpdateMarco?: (marco: Marco) => void;
+  onUpdatePresent?: (present: Present) => void;
+  onDeleteMarco?: (marcoId: string) => void;
+  onDeletePresent?: (presentId: string) => void;
+  onCloneMarco?: (marco: Marco) => void;
+  onClonePresent?: (present: Present) => void;
 }
 
 const MapView: React.FC<MapViewProps> = ({
@@ -32,6 +41,12 @@ const MapView: React.FC<MapViewProps> = ({
   presents,
   onAddPresent,
   onCollectPresent,
+  onUpdateMarco,
+  onUpdatePresent,
+  onDeleteMarco,
+  onDeletePresent,
+  onCloneMarco,
+  onClonePresent,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -42,6 +57,15 @@ const MapView: React.FC<MapViewProps> = ({
     lat: number;
     lng: number;
   } | null>(null);
+  const [elementContextMenu, setElementContextMenu] = useState<{
+    x: number;
+    y: number;
+    element: {
+      type: 'marco' | 'present' | 'route';
+      id: string;
+      data: Marco | Present | Route;
+    };
+  } | null>(null);
   const [currentLocationMarker, setCurrentLocationMarker] = useState<L.Marker | null>(null);
   const [routeMarkers, setRouteMarkers] = useState<L.Marker[]>([]);
   const [presentMarkers, setPresentMarkers] = useState<L.Marker[]>([]);
@@ -50,6 +74,17 @@ const MapView: React.FC<MapViewProps> = ({
   const [showStartRaceModal, setShowStartRaceModal] = useState(false);
   const [raceStarted, setRaceStarted] = useState(false);
   const [nearbyPresent, setNearbyPresent] = useState<Present | null>(null);
+  const [mapTileType, setMapTileType] = useState<MapTileType>('openstreetmap');
+  const [tileLayer, setTileLayer] = useState<L.TileLayer | null>(null);
+  const [editModal, setEditModal] = useState<{
+    isOpen: boolean;
+    element: { type: 'marco' | 'present'; data: Marco | Present } | null;
+    editType: 'location' | 'info';
+  }>({
+    isOpen: false,
+    element: null,
+    editType: 'info'
+  });
   const { toast } = useToast();
   const { routeInfo, isLoading, calculateRoute } = useRouting();
 
@@ -68,6 +103,59 @@ const MapView: React.FC<MapViewProps> = ({
 
     return R * c;
   }, []);
+
+  // Função para obter URL do tile layer
+  const getTileLayerUrl = (type: MapTileType): { url: string; attribution: string; maxZoom: number } => {
+    switch (type) {
+      case 'satellite':
+        return {
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+          maxZoom: 19
+        };
+      case 'terrain':
+        return {
+          url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+          attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+          maxZoom: 17
+        };
+      case 'dark':
+        return {
+          url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          maxZoom: 19
+        };
+      case 'watercolor':
+        return {
+          url: 'https://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.jpg',
+          attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 16
+        };
+      default:
+        return {
+          url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          attribution: '© OpenStreetMap contributors',
+          maxZoom: 19
+        };
+    }
+  };
+
+  // Atualiza o tile layer quando o tipo muda
+  useEffect(() => {
+    if (!map.current) return;
+
+    if (tileLayer) {
+      map.current.removeLayer(tileLayer);
+    }
+
+    const { url, attribution, maxZoom } = getTileLayerUrl(mapTileType);
+    const newTileLayer = L.tileLayer(url, {
+      attribution,
+      maxZoom
+    }).addTo(map.current);
+
+    setTileLayer(newTileLayer);
+  }, [mapTileType]);
 
   // Verifica proximidade com presentes
   useEffect(() => {
@@ -128,11 +216,13 @@ const MapView: React.FC<MapViewProps> = ({
         attributionControl: true
       });
 
-      // Adiciona tile layer do OpenStreetMap
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
+      // Adiciona tile layer inicial
+      const { url, attribution, maxZoom } = getTileLayerUrl(mapTileType);
+      const initialTileLayer = L.tileLayer(url, {
+        attribution,
+        maxZoom
       }).addTo(map.current);
+      setTileLayer(initialTileLayer);
 
       // Event listener para clique direito
       map.current.on('contextmenu', (e: L.LeafletMouseEvent) => {
@@ -143,11 +233,13 @@ const MapView: React.FC<MapViewProps> = ({
           lat: e.latlng.lat,
           lng: e.latlng.lng,
         });
+        setElementContextMenu(null);
       });
 
       // Fecha o menu de contexto ao clicar no mapa
       map.current.on('click', () => {
         setContextMenu(null);
+        setElementContextMenu(null);
       });
 
       // Força o redimensionamento do mapa
@@ -181,18 +273,39 @@ const MapView: React.FC<MapViewProps> = ({
       const marker = L.marker([present.lat, present.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px;">🎁</div>`,
+          html: `<div style="background-color: ${markerColor}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer;">🎁</div>`,
           iconSize: [24, 24],
           iconAnchor: [12, 12]
         })
       }).addTo(map.current!);
 
       marker.bindPopup(`<b>${present.name}</b><br>${present.description}<br>${present.collected ? '<i>Coletado</i>' : '<i>Disponível</i>'}`);
+      
+      // Adiciona event listeners para foco e menu de contexto
+      marker.on('click', () => {
+        focusOnElement(present.lat, present.lng);
+      });
+
+      marker.on('contextmenu', (e) => {
+        const containerPoint = map.current!.latLngToContainerPoint(e.latlng);
+        setElementContextMenu({
+          x: containerPoint.x,
+          y: containerPoint.y,
+          element: {
+            type: 'present',
+            id: present.id,
+            data: present
+          }
+        });
+        setContextMenu(null);
+        L.DomEvent.stopPropagation(e);
+      });
+
       newPresentMarkers.push(marker);
     });
 
     setPresentMarkers(newPresentMarkers);
-  }, [presents]);
+  }, [presents, focusOnElement]);
 
   // Atualiza marcadores e rota quando a rota atual muda
   useEffect(() => {
@@ -226,13 +339,34 @@ const MapView: React.FC<MapViewProps> = ({
       const marker = L.marker([marco.lat, marco.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+          html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer;"></div>`,
           iconSize: [20, 20],
           iconAnchor: [10, 10]
         })
       }).addTo(map.current!);
 
       marker.bindPopup(`<b>${marco.name}</b><br>Tipo: ${getMarcoTypeName(marco.type)}`);
+      
+      // Adiciona event listeners para foco e menu de contexto
+      marker.on('click', () => {
+        focusOnElement(marco.lat, marco.lng);
+      });
+
+      marker.on('contextmenu', (e) => {
+        const containerPoint = map.current!.latLngToContainerPoint(e.latlng);
+        setElementContextMenu({
+          x: containerPoint.x,
+          y: containerPoint.y,
+          element: {
+            type: 'marco',
+            id: marco.id,
+            data: marco
+          }
+        });
+        setContextMenu(null);
+        L.DomEvent.stopPropagation(e);
+      });
+
       newMarkers.push(marker);
     });
 
@@ -254,17 +388,37 @@ const MapView: React.FC<MapViewProps> = ({
             opacity: 0.8
           }).addTo(map.current!);
 
+          // Adiciona event listener para foco na rota
+          polyline.on('click', () => {
+            const bounds = polyline.getBounds();
+            map.current!.fitBounds(bounds, { padding: [20, 20] });
+          });
+
+          polyline.on('contextmenu', (e) => {
+            const containerPoint = map.current!.latLngToContainerPoint(e.latlng);
+            setElementContextMenu({
+              x: containerPoint.x,
+              y: containerPoint.y,
+              element: {
+                type: 'route',
+                id: currentRoute.id,
+                data: currentRoute
+              }
+            });
+            setContextMenu(null);
+            L.DomEvent.stopPropagation(e);
+          });
+
           setRoutePath(polyline);
 
-          // Ajusta o zoom para mostrar todos os marcos
           const group = new L.FeatureGroup([...newMarkers, polyline]);
           map.current!.fitBounds(group.getBounds(), { padding: [20, 20] });
         }
       });
     } else if (currentRoute.marcos.length === 1) {
-      map.current!.setView([currentRoute.marcos[0].lat, currentRoute.marcos[0].lng], 16);
+      focusOnElement(currentRoute.marcos[0].lat, currentRoute.marcos[0].lng, 16);
     }
-  }, [currentRoute, calculateRoute]);
+  }, [currentRoute, calculateRoute, focusOnElement]);
 
   const getMarcoColor = (type: Marco['type']) => {
     switch (type) {
@@ -383,6 +537,79 @@ const MapView: React.FC<MapViewProps> = ({
     }
   };
 
+  // Handlers para elementos
+  const handleElementEdit = useCallback((type: 'location' | 'info') => {
+    if (elementContextMenu) {
+      setEditModal({
+        isOpen: true,
+        element: {
+          type: elementContextMenu.element.type as 'marco' | 'present',
+          data: elementContextMenu.element.data as Marco | Present
+        },
+        editType: type
+      });
+      setElementContextMenu(null);
+    }
+  }, [elementContextMenu]);
+
+  const handleElementDelete = useCallback(() => {
+    if (!elementContextMenu) return;
+
+    const { element } = elementContextMenu;
+    
+    if (element.type === 'marco' && onDeleteMarco) {
+      onDeleteMarco(element.id);
+    } else if (element.type === 'present' && onDeletePresent) {
+      onDeletePresent(element.id);
+    }
+    
+    setElementContextMenu(null);
+    
+    toast({
+      title: `${element.type === 'marco' ? 'Marco' : 'Presente'} removido`,
+      description: "Item removido com sucesso!"
+    });
+  }, [elementContextMenu, onDeleteMarco, onDeletePresent, toast]);
+
+  const handleElementClone = useCallback(() => {
+    if (!elementContextMenu) return;
+
+    const { element } = elementContextMenu;
+    
+    if (element.type === 'marco' && onCloneMarco) {
+      onCloneMarco(element.data as Marco);
+    } else if (element.type === 'present' && onClonePresent) {
+      onClonePresent(element.data as Present);
+    }
+    
+    setElementContextMenu(null);
+    
+    toast({
+      title: `${element.type === 'marco' ? 'Marco' : 'Presente'} clonado`,
+      description: "Item clonado com sucesso!"
+    });
+  }, [elementContextMenu, onCloneMarco, onClonePresent, toast]);
+
+  const handleSaveElement = useCallback((updatedElement: Marco | Present) => {
+    if (editModal.element?.type === 'marco' && onUpdateMarco) {
+      onUpdateMarco(updatedElement as Marco);
+    } else if (editModal.element?.type === 'present' && onUpdatePresent) {
+      onUpdatePresent(updatedElement as Present);
+    }
+    
+    toast({
+      title: "Elemento atualizado",
+      description: "Alterações salvas com sucesso!"
+    });
+  }, [editModal.element, onUpdateMarco, onUpdatePresent, toast]);
+
+  // Função para focar em um elemento
+  const focusOnElement = useCallback((lat: number, lng: number, zoom: number = 18) => {
+    if (map.current) {
+      map.current.setView([lat, lng], zoom, { animate: true });
+    }
+  }, []);
+
   const handleAddMarco = useCallback((type: Marco['type']) => {
     if (!contextMenu) return;
 
@@ -475,7 +702,15 @@ const MapView: React.FC<MapViewProps> = ({
           style={{ minHeight: '400px' }}
         />
         
-        {/* Menu de contexto */}
+        {/* Seletor de tipo de mapa */}
+        <div className="absolute top-4 right-4 z-10 w-64">
+          <MapTypeSelector
+            currentType={mapTileType}
+            onTypeChange={setMapTileType}
+          />
+        </div>
+        
+        {/* Menu de contexto do mapa */}
         {contextMenu && (
           <MapContextMenu
             x={contextMenu.x}
@@ -487,6 +722,28 @@ const MapView: React.FC<MapViewProps> = ({
             onClose={() => setContextMenu(null)}
           />
         )}
+
+        {/* Menu de contexto de elementos */}
+        {elementContextMenu && (
+          <ElementContextMenu
+            x={elementContextMenu.x}
+            y={elementContextMenu.y}
+            element={elementContextMenu.element}
+            onEdit={handleElementEdit}
+            onDelete={handleElementDelete}
+            onClone={handleElementClone}
+            onClose={() => setElementContextMenu(null)}
+          />
+        )}
+
+        {/* Modal de edição */}
+        <EditElementModal
+          isOpen={editModal.isOpen}
+          onClose={() => setEditModal({ isOpen: false, element: null, editType: 'info' })}
+          element={editModal.element}
+          editType={editModal.editType}
+          onSave={handleSaveElement}
+        />
 
         {/* Alerta de presente próximo */}
         {nearbyPresent && (

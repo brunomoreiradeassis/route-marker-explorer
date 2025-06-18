@@ -195,6 +195,82 @@ const MapContainer = () => {
     });
   };
 
+  const updateMarco = (updatedMarco: Marco) => {
+    if (!currentRoute) return;
+
+    const updatedRoute = {
+      ...currentRoute,
+      marcos: currentRoute.marcos.map(m => 
+        m.id === updatedMarco.id ? updatedMarco : m
+      )
+    };
+
+    const updatedRoutes = routes.map(r => 
+      r.id === currentRoute.id ? updatedRoute : r
+    );
+
+    saveData(updatedRoutes);
+    setCurrentRoute(updatedRoute);
+  };
+
+  const updatePresent = (updatedPresent: Present) => {
+    const updatedPresents = presents.map(p => 
+      p.id === updatedPresent.id ? updatedPresent : p
+    );
+    
+    setPresents(updatedPresents);
+    localStorage.setItem('map-presents', JSON.stringify(updatedPresents));
+  };
+
+  const cloneMarco = (marco: Marco) => {
+    if (!currentRoute) return;
+
+    const newMarco: Marco = {
+      ...marco,
+      id: Date.now().toString(),
+      name: `${marco.name} (Cópia)`,
+      lat: marco.lat + 0.0001, // Pequeno offset para não sobrepor
+      lng: marco.lng + 0.0001
+    };
+
+    const updatedRoute = {
+      ...currentRoute,
+      marcos: [...currentRoute.marcos, newMarco]
+    };
+
+    const updatedRoutes = routes.map(r => 
+      r.id === currentRoute.id ? updatedRoute : r
+    );
+
+    saveData(updatedRoutes);
+    setCurrentRoute(updatedRoute);
+
+    toast({
+      title: "Marco clonado",
+      description: `Marco "${newMarco.name}" criado com sucesso!`
+    });
+  };
+
+  const clonePresent = (present: Present) => {
+    const newPresent: Present = {
+      ...present,
+      id: Date.now().toString(),
+      name: `${present.name} (Cópia)`,
+      lat: present.lat + 0.0001, // Pequeno offset para não sobrepor
+      lng: present.lng + 0.0001,
+      collected: false
+    };
+
+    const newPresents = [...presents, newPresent];
+    setPresents(newPresents);
+    localStorage.setItem('map-presents', JSON.stringify(newPresents));
+
+    toast({
+      title: "Presente clonado",
+      description: `Presente "${newPresent.name}" criado com sucesso!`
+    });
+  };
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -216,6 +292,12 @@ const MapContainer = () => {
             presents={presents}
             onAddPresent={addPresent}
             onCollectPresent={collectPresent}
+            onUpdateMarco={updateMarco}
+            onUpdatePresent={updatePresent}
+            onDeleteMarco={removeMarco}
+            onDeletePresent={removePresent}
+            onCloneMarco={cloneMarco}
+            onClonePresent={clonePresent}
           />
         </SidebarInset>
       </div>
