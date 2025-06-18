@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Gift, Store } from 'lucide-react';
+import { MapPin, Gift, Store, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ProximityAlertProps {
   alerts: {
@@ -12,11 +12,15 @@ interface ProximityAlertProps {
     distance: number;
     id: string;
     subtype?: string;
+    lat?: number;
+    lng?: number;
   }[];
   onFocus: (lat: number, lng: number) => void;
 }
 
 const ProximityAlert: React.FC<ProximityAlertProps> = ({ alerts, onFocus }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   // Function to get appropriate icon
   const getAlertIcon = (type: string, subtype?: string) => {
     if (type === 'marco') {
@@ -75,44 +79,77 @@ const ProximityAlert: React.FC<ProximityAlertProps> = ({ alerts, onFocus }) => {
     return 'Ponto';
   };
 
+  if (alerts.length === 0) return null;
+
   return (
-    <div className="space-y-2">
-      <Card className="border-2 border-blue-500">
+    <div className="space-y-2 w-80">
+      <Card className="border-2 border-blue-500 bg-white/95 backdrop-blur-sm shadow-lg">
         <CardContent className="p-3">
-          <h3 className="font-bold text-sm mb-2">Pontos próximos</h3>
-          <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-            {alerts.map((alert) => (
-              <div 
-                key={`${alert.type}-${alert.id}`} 
-                className="bg-background border rounded-md p-2 flex items-center justify-between"
-              >
-                <div className="flex items-center space-x-2">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getDistanceColor(alert.distance)}`}>
-                    {getAlertIcon(alert.type, alert.subtype)}
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium truncate max-w-[120px]">{alert.name}</p>
-                    <div className="flex items-center space-x-1">
-                      <Badge variant="outline" className="text-[10px] h-4">
-                        {getTypeName(alert.type, alert.subtype)}
-                      </Badge>
-                      <Badge className={`text-[10px] h-4 ${getDistanceColor(alert.distance)}`}>
-                        {formatDistance(alert.distance)}
-                      </Badge>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="font-bold text-sm flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-blue-500" />
+              Pontos próximos ({alerts.length})
+            </h3>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 w-6 p-0"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              {isExpanded ? 
+                <ChevronUp className="h-3 w-3" /> : 
+                <ChevronDown className="h-3 w-3" />
+              }
+            </Button>
+          </div>
+          
+          {isExpanded && (
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {alerts.slice(0, 10).map((alert, index) => (
+                <div 
+                  key={`${alert.type}-${alert.id}-${index}`} 
+                  className="bg-background border rounded-md p-2 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getDistanceColor(alert.distance)}`}>
+                      {getAlertIcon(alert.type, alert.subtype)}
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium truncate max-w-[120px]" title={alert.name}>
+                        {alert.name}
+                      </p>
+                      <div className="flex items-center space-x-1">
+                        <Badge variant="outline" className="text-[10px] h-4">
+                          {getTypeName(alert.type, alert.subtype)}
+                        </Badge>
+                        <Badge className={`text-[10px] h-4 ${getDistanceColor(alert.distance)}`}>
+                          {formatDistance(alert.distance)}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-6 w-6 p-0 hover:bg-primary/10" 
+                    onClick={() => {
+                      if (alert.lat && alert.lng) {
+                        onFocus(alert.lat, alert.lng);
+                      }
+                    }}
+                    title="Focar no elemento"
+                  >
+                    <MapPin className="h-3 w-3" />
+                  </Button>
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  className="h-6 w-6 p-0" 
-                  onClick={() => onFocus(0, 0)} // This will be properly implemented in the MapView
-                >
-                  <MapPin className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
+              ))}
+              {alerts.length > 10 && (
+                <p className="text-xs text-muted-foreground text-center py-1">
+                  E mais {alerts.length - 10} pontos próximos...
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

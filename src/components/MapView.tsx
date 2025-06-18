@@ -275,6 +275,8 @@ const MapView: React.FC<MapViewProps> = ({
       distance: number;
       id: string;
       subtype?: string;
+      lat?: number;
+      lng?: number;
     }[] = [];
 
     // Check proximity to marcos
@@ -294,7 +296,9 @@ const MapView: React.FC<MapViewProps> = ({
             name: marco.name,
             distance: distance,
             id: marco.id,
-            subtype: marco.type
+            subtype: marco.type,
+            lat: marco.lat,
+            lng: marco.lng
           });
         }
       });
@@ -317,7 +321,9 @@ const MapView: React.FC<MapViewProps> = ({
           name: present.name,
           distance: distance,
           id: present.id,
-          subtype: present.type
+          subtype: present.type,
+          lat: present.lat,
+          lng: present.lng
         });
       }
     });
@@ -337,7 +343,9 @@ const MapView: React.FC<MapViewProps> = ({
           name: credenciado.name,
           distance: distance,
           id: credenciado.id,
-          subtype: credenciado.type
+          subtype: credenciado.type,
+          lat: credenciado.lat,
+          lng: credenciado.lng
         });
       }
     });
@@ -452,7 +460,7 @@ const MapView: React.FC<MapViewProps> = ({
     };
   }, []);
 
-  // Atualiza marcadores de presentes
+  // Atualiza marcadores de presentes - ensure they show from start
   useEffect(() => {
     if (!map.current) return;
 
@@ -504,7 +512,7 @@ const MapView: React.FC<MapViewProps> = ({
     setPresentMarkers(newPresentMarkers);
   }, [presents, focusOnElement]);
 
-  // Atualiza marcadores de credenciados
+  // Atualiza marcadores de credenciados - ensure they show from start
   useEffect(() => {
     if (!map.current) return;
 
@@ -958,10 +966,13 @@ const MapView: React.FC<MapViewProps> = ({
           />
         </div>
         
-        {/* Proximity Alerts */}
+        {/* Proximity Alerts - repositioned to left side */}
         {proximityAlerts.length > 0 && (
-          <div className="absolute top-20 right-4 z-10 max-h-[60vh] overflow-y-auto w-64">
-            <ProximityAlert alerts={proximityAlerts} onFocus={(lat, lng) => focusOnElement(lat, lng)} />
+          <div className="absolute top-4 left-4 z-10">
+            <ProximityAlert 
+              alerts={proximityAlerts} 
+              onFocus={(lat, lng) => focusOnElement(lat, lng)} 
+            />
           </div>
         )}
         

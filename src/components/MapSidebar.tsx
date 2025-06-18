@@ -1,48 +1,35 @@
-
 import React, { useState } from 'react';
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarTrigger,
-  SidebarFooter,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 import { 
-  MapPin, 
-  Route as RouteIcon, 
+  Collapsible, 
+  CollapsibleContent, 
+  CollapsibleTrigger 
+} from '@/components/ui/collapsible';
+import { 
   Plus, 
-  Trash2,
-  Gift,
-  Store,
-  Settings,
-  Map,
-  List
+  MapPin, 
+  Gift, 
+  Store, 
+  Trash2, 
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Route, Marco, Present, Credenciado } from '../types/map';
-import PresentManager from './PresentManager';
-import CredenciadoManager from './CredenciadoManager';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 
 interface MapSidebarProps {
   routes: Route[];
@@ -74,28 +61,17 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
   onRemoveCredenciado,
 }) => {
   const [newRouteName, setNewRouteName] = useState('');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [showNewRouteForm, setShowNewRouteForm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
-  const [activeSubTab, setActiveSubTab] = useState('routes');
+  const [routesOpen, setRoutesOpen] = useState(true);
+  const [presentsOpen, setPresentsOpen] = useState(true);
+  const [credenciadosOpen, setCredenciadosOpen] = useState(true);
 
   const handleCreateRoute = () => {
     if (newRouteName.trim()) {
       onCreateRoute(newRouteName.trim());
       setNewRouteName('');
-      setIsCreateDialogOpen(false);
-    }
-  };
-
-  const getMarcoTypeColor = (type: Marco['type']) => {
-    switch (type) {
-      case 'inicio':
-        return 'bg-green-500';
-      case 'meio':
-        return 'bg-orange-500';
-      case 'fim':
-        return 'bg-red-500';
-      default:
-        return 'bg-blue-500';
+      setShowNewRouteForm(false);
     }
   };
 
@@ -112,311 +88,190 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
     }
   };
 
+  const getCredenciadoTypeName = (type: string) => {
+    switch (type) {
+      case 'restaurante':
+        return 'Restaurante';
+      case 'posto':
+        return 'Posto de Gasolina';
+      case 'farmacia':
+        return 'Farmácia';
+      case 'supermercado':
+        return 'Supermercado';
+      case 'hotel':
+        return 'Hotel';
+      case 'pousada':
+        return 'Pousada';
+      case 'academia':
+        return 'Academia';
+      default:
+        return 'Estabelecimento';
+    }
+  };
+
   return (
-    <Sidebar collapsible="icon" className="border-r" defaultWidth="w-80" collapsedWidth="w-14">
-      <SidebarHeader>
+    <Sidebar
+      collapsible="icon"
+      className="w-80 border-r"
+    >
+      <SidebarHeader className="p-4 border-b">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-bold group-data-[collapsible=icon]:hidden">Sistema de Rotas</h1>
-          <SidebarTrigger />
+          <h2 className="text-lg font-semibold">Mapa Interativo</h2>
+          <SidebarTrigger className="ml-auto" />
         </div>
       </SidebarHeader>
-
-      <SidebarContent className="py-2">
-        <div className="group-data-[collapsible=icon]:hidden px-2">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="overview" className="gap-2">
-                <Map className="w-4 h-4" />
-                Visão Geral
-              </TabsTrigger>
-              <TabsTrigger value="manage" className="gap-2">
-                <Settings className="w-4 h-4" />
-                Gerenciar
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="overview" className="mt-2 space-y-4">
-              {/* Rotas visíveis */}
-              <SidebarGroup>
-                <SidebarGroupLabel className="flex items-center justify-between">
-                  <span>Rotas Ativas</span>
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <ScrollArea className="h-32">
-                    <SidebarMenu>
-                      {routes.map((route) => (
-                        <SidebarMenuItem key={route.id}>
-                          <div className="flex items-center justify-between w-full">
-                            <SidebarMenuButton
-                              onClick={() => onSelectRoute(route)}
-                              className={`flex-1 justify-start ${
-                                currentRoute?.id === route.id ? 'bg-accent' : ''
-                              }`}
-                              tooltip={route.name}
-                            >
-                              <RouteIcon className="w-4 h-4" style={{ color: route.color }} />
-                              <span className="truncate">{route.name}</span>
-                            </SidebarMenuButton>
-                          </div>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </ScrollArea>
-                </SidebarGroupContent>
-              </SidebarGroup>
-
-              {/* Marcos da Rota Atual */}
-              {currentRoute && (
-                <SidebarGroup>
-                  <SidebarGroupLabel>
-                    Marcos - {currentRoute.name}
-                  </SidebarGroupLabel>
-                  <SidebarGroupContent>
-                    <ScrollArea className="h-32">
-                      {currentRoute.marcos.length === 0 ? (
-                        <p className="text-sm text-muted-foreground p-2">
-                          Nenhum marco nesta rota. Clique com o botão direito no mapa para adicionar.
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {currentRoute.marcos
-                            .sort((a, b) => {
-                              const order = { inicio: 0, meio: 1, fim: 2 };
-                              return order[a.type] - order[b.type];
-                            })
-                            .map((marco) => (
-                              <Card key={marco.id} className="p-2">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center space-x-2 min-w-0">
-                                    <MapPin 
-                                      className={`w-4 h-4 text-white p-0.5 rounded flex-shrink-0 ${getMarcoTypeColor(marco.type)}`}
-                                    />
-                                    <div className="min-w-0">
-                                      <p className="font-medium text-sm truncate">{marco.name}</p>
-                                      <Badge variant="secondary" className="text-xs">
-                                        {getMarcoTypeName(marco.type)}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => onRemoveMarco(marco.id)}
-                                    className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              </Card>
-                            ))}
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </SidebarGroupContent>
-                </SidebarGroup>
-              )}
-                            
-              {/* Resumo de presentes */}
-              <SidebarGroup>
-                <SidebarGroupLabel>
-                  Presentes
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <div className="p-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm">Total:</p>
-                      <Badge>{presents.length}</Badge>
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-sm">Coletados:</p>
-                      <Badge variant="outline" className="bg-green-100">{presents.filter(p => p.collected).length}</Badge>
-                    </div>
-                  </div>
-                </SidebarGroupContent>
-              </SidebarGroup>
-              
-              {/* Resumo de credenciados */}
-              <SidebarGroup>
-                <SidebarGroupLabel>
-                  Credenciados
-                </SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <div className="p-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm">Total:</p>
-                      <Badge>{credenciados.length}</Badge>
-                    </div>
-                  </div>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            </TabsContent>
-            
-            <TabsContent value="manage" className="mt-2">
-              <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="routes" className="gap-1 text-xs">
-                    <RouteIcon className="w-3.5 h-3.5" />
-                    Rotas
-                  </TabsTrigger>
-                  <TabsTrigger value="presents" className="gap-1 text-xs">
-                    <Gift className="w-3.5 h-3.5" />
-                    Presentes
-                  </TabsTrigger>
-                  <TabsTrigger value="credenciados" className="gap-1 text-xs">
-                    <Store className="w-3.5 h-3.5" />
-                    Credenciados
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="routes" className="pt-4 space-y-4">
-                  {/* Gerenciar Rotas */}
-                  <div className="flex justify-end">
-                    <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button size="sm" className="text-xs">
-                          <Plus className="w-3.5 h-3.5 mr-1" /> Nova Rota
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Nova Rota</DialogTitle>
-                          <DialogDescription>
-                            Digite o nome da nova rota
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="routeName">Nome da Rota</Label>
-                            <Input
-                              id="routeName"
-                              value={newRouteName}
-                              onChange={(e) => setNewRouteName(e.target.value)}
-                              placeholder="Ex: Rota para o trabalho"
-                              onKeyPress={(e) => e.key === 'Enter' && handleCreateRoute()}
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button onClick={handleCreateRoute}>Criar Rota</Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <ScrollArea className="h-96">
-                      {routes.length === 0 ? (
-                        <p className="text-sm text-muted-foreground p-2">
-                          Nenhuma rota criada. Clique em "Nova Rota" para criar.
-                        </p>
-                      ) : (
-                        routes.map((route) => (
-                          <Card key={route.id} className="mb-2">
-                            <CardHeader className="p-3">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: route.color }}></div>
-                                  <CardTitle className="text-sm">{route.name}</CardTitle>
-                                </div>
-                                <div className="flex items-center space-x-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 px-2"
-                                    onClick={() => onSelectRoute(route)}
-                                  >
-                                    Selecionar
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    className="h-7 w-7 p-0"
-                                    onClick={() => onRemoveRoute(route.id)}
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="p-3 pt-0">
-                              <p className="text-xs text-muted-foreground">
-                                {route.marcos.length} marcos | 
-                                {route.marcos.filter(m => m.type === 'inicio').length} início | 
-                                {route.marcos.filter(m => m.type === 'meio').length} meio | 
-                                {route.marcos.filter(m => m.type === 'fim').length} fim
-                              </p>
-                            </CardContent>
-                          </Card>
-                        ))
-                      )}
-                    </ScrollArea>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="presents" className="pt-4">
-                  <PresentManager
-                    presents={presents}
-                    onAddPresent={onAddPresent}
-                    onRemovePresent={onRemovePresent}
-                  />
-                </TabsContent>
-
-                <TabsContent value="credenciados" className="pt-4">
-                  <CredenciadoManager
-                    credenciados={credenciados}
-                    onAddCredenciado={onAddCredenciado}
-                    onRemoveCredenciado={onRemoveCredenciado}
-                  />
-                </TabsContent>
-              </Tabs>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Versão colapsada - mostra apenas ícones */}
-        <div className="group-data-[collapsible=icon]:block hidden">
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Rotas">
-                    <RouteIcon className="w-4 h-4" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Presentes">
-                    <Gift className="w-4 h-4" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Credenciados">
-                    <Store className="w-4 h-4" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Gerenciar">
-                    <Settings className="w-4 h-4" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </div>
-      </SidebarContent>
       
-      <SidebarFooter className="group-data-[collapsible=icon]:hidden">
-        <Card>
-          <CardHeader className="p-3">
-            <CardTitle className="text-sm">Como usar</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xs space-y-2 p-3 pt-0">
-            <p>• Crie rotas, presentes e credenciados usando o menu Gerenciar</p>
-            <p>• Clique com o botão direito no mapa para adicionar elementos</p>
-            <p>• Use marcos de Início, Meio e Fim para organizar sua rota</p>
-            <p>• Configure presentes e estabelecimentos credenciados</p>
-          </CardContent>
-        </Card>
-      </SidebarFooter>
+      <SidebarContent className="p-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
+          <TabsList className="grid w-full grid-cols-2 m-4 mb-2">
+            <TabsTrigger value="overview" className="text-sm">Visão Geral</TabsTrigger>
+            <TabsTrigger value="manage" className="text-sm">Gerenciar</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="mt-0 p-4 space-y-4">
+            {/* Rotas Section */}
+            <Collapsible open={routesOpen} onOpenChange={setRoutesOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span className="font-medium text-sm">Rotas ({routes.length})</span>
+                </div>
+                {routesOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 mt-2">
+                <ScrollArea className="max-h-48">
+                  {routes.map((route) => (
+                    <Card 
+                      key={route.id} 
+                      className={`cursor-pointer transition-colors hover:bg-muted/50 ${
+                        currentRoute?.id === route.id ? 'border-primary' : ''
+                      }`}
+                      onClick={() => onSelectRoute(route)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-1">
+                            <div 
+                              className="w-3 h-3 rounded-full border-2 border-white shadow-sm" 
+                              style={{ backgroundColor: route.color }}
+                            />
+                            <span className="text-sm font-medium truncate">{route.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Badge variant="outline" className="text-xs">
+                              {route.marcos.length} marcos
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRemoveRoute(route.id);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </ScrollArea>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Separator />
+
+            {/* Presentes Section */}
+            <Collapsible open={presentsOpen} onOpenChange={setPresentsOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-4 w-4" />
+                  <span className="font-medium text-sm">Presentes ({presents.length})</span>
+                </div>
+                {presentsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 mt-2">
+                <ScrollArea className="max-h-48">
+                  {presents.map((present) => (
+                    <Card key={present.id} className="hover:bg-muted/50">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="text-sm">{present.collected ? '✅' : '🎁'}</span>
+                            <div>
+                              <p className="text-sm font-medium truncate">{present.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{present.description}</p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => onRemovePresent(present.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </ScrollArea>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Separator />
+
+            {/* Credenciados Section */}
+            <Collapsible open={credenciadosOpen} onOpenChange={setCredenciadosOpen}>
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-muted rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Store className="h-4 w-4" />
+                  <span className="font-medium text-sm">Credenciados ({credenciados.length})</span>
+                </div>
+                {credenciadosOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 mt-2">
+                <ScrollArea className="max-h-48">
+                  {credenciados.map((credenciado) => (
+                    <Card key={credenciado.id} className="hover:bg-muted/50">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 flex-1">
+                            <span className="text-sm">🏪</span>
+                            <div>
+                              <p className="text-sm font-medium truncate">{credenciado.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {getCredenciadoTypeName(credenciado.type)}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0"
+                            onClick={() => onRemoveCredenciado(credenciado.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </ScrollArea>
+              </CollapsibleContent>
+            </Collapsible>
+          </TabsContent>
+
+          <TabsContent value="manage" className="mt-0 h-full">
+            {/* Manage content will be implemented here */}
+            <div className="p-4">
+              <p className="text-sm text-muted-foreground">Funcionalidades de gerenciamento em desenvolvimento...</p>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </SidebarContent>
     </Sidebar>
   );
 };
