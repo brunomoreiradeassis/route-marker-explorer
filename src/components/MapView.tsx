@@ -105,6 +105,8 @@ const MapView: React.FC<MapViewProps> = ({
     distance: number;
     id: string;
     subtype?: string;
+    lat?: number;
+    lng?: number;
   }[]>([]);
   
   const { toast } = useToast();
@@ -460,7 +462,7 @@ const MapView: React.FC<MapViewProps> = ({
     };
   }, []);
 
-  // Atualiza marcadores de presentes - ensure they show from start
+  // Atualiza marcadores de presentes - ALWAYS show them
   useEffect(() => {
     if (!map.current) return;
 
@@ -512,7 +514,7 @@ const MapView: React.FC<MapViewProps> = ({
     setPresentMarkers(newPresentMarkers);
   }, [presents, focusOnElement]);
 
-  // Atualiza marcadores de credenciados - ensure they show from start
+  // Atualiza marcadores de credenciados - ALWAYS show them
   useEffect(() => {
     if (!map.current) return;
 
@@ -958,17 +960,17 @@ const MapView: React.FC<MapViewProps> = ({
           style={{ minHeight: '400px' }}
         />
         
-        {/* Seletor de tipo de mapa */}
-        <div className="absolute top-4 right-4 z-10 w-64">
+        {/* Seletor de tipo de mapa - repositioned to top-right */}
+        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-10 w-48 sm:w-64">
           <MapTypeSelector
             currentType={mapTileType}
             onTypeChange={setMapTileType}
           />
         </div>
         
-        {/* Proximity Alerts - repositioned to left side */}
+        {/* Proximity Alerts - repositioned below Map Type Selector */}
         {proximityAlerts.length > 0 && (
-          <div className="absolute top-4 left-4 z-10">
+          <div className="absolute top-16 sm:top-20 right-2 sm:right-4 z-10 w-48 sm:w-64">
             <ProximityAlert 
               alerts={proximityAlerts} 
               onFocus={(lat, lng) => focusOnElement(lat, lng)} 

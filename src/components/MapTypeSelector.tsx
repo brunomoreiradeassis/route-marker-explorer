@@ -49,42 +49,47 @@ const MapTypeSelector: React.FC<MapTypeSelectorProps> = ({
     }
   ];
 
+  const currentMapType = mapTypes.find(mt => mt.type === currentType);
+
   if (isMinimized) {
     return (
       <Card className="w-auto">
-        <CardHeader className="p-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Mapa</h3>
+        <CardContent className="p-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
+              {currentMapType && <currentMapType.icon className="w-3 h-3" />}
+              <span className="text-xs font-medium">{currentMapType?.name}</span>
+            </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsMinimized(false)}
-              className="h-6 w-6 p-0"
+              className="h-4 w-4 p-0"
             >
-              <Maximize2 className="w-3 h-3" />
+              <Maximize2 className="w-2 h-2" />
             </Button>
           </div>
-        </CardHeader>
+        </CardContent>
       </Card>
     );
   }
 
   return (
     <Card className="w-full">
-      <CardHeader className="p-3">
+      <CardHeader className="p-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Tipo de Mapa</h3>
+          <h3 className="text-xs font-medium">Tipo de Mapa</h3>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsMinimized(true)}
-            className="h-6 w-6 p-0"
+            className="h-4 w-4 p-0"
           >
-            <Minimize2 className="w-3 h-3" />
+            <Minimize2 className="w-2 h-2" />
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="p-3 pt-0">
+      <CardContent className="p-2 pt-0">
         <div className="space-y-1">
           {mapTypes.map((mapType) => {
             const Icon = mapType.icon;
@@ -93,13 +98,13 @@ const MapTypeSelector: React.FC<MapTypeSelectorProps> = ({
                 key={mapType.type}
                 variant={currentType === mapType.type ? "default" : "ghost"}
                 size="sm"
-                className="w-full justify-start h-auto p-2"
+                className="w-full justify-start h-auto p-1.5 text-xs"
                 onClick={() => onTypeChange(mapType.type)}
               >
-                <Icon className="w-4 h-4 mr-2 shrink-0" />
+                <Icon className="w-3 h-3 mr-1.5 shrink-0" />
                 <div className="text-left">
                   <div className="font-medium">{mapType.name}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-[10px] text-muted-foreground">
                     {mapType.description}
                   </div>
                 </div>
