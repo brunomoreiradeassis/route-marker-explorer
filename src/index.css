@@ -103,6 +103,8 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Prevent horizontal scrolling on mobile */
+    overflow-x: hidden;
   }
 }
 
@@ -121,4 +123,32 @@
 
 .leaflet-control-zoom a {
   @apply text-foreground hover:bg-accent;
+}
+
+/* Mobile responsive map controls */
+@media (max-width: 768px) {
+  .leaflet-control-container {
+    font-size: 14px;
+  }
+  
+  .leaflet-control-zoom {
+    margin: 10px !important;
+  }
+  
+  .leaflet-control-zoom a {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+  }
+  
+  .leaflet-popup-content-wrapper {
+    max-width: calc(100vw - 40px);
+  }
+}
+
+/* Ensure proper touch interactions on mobile */
+@media (max-width: 768px) {
+  .leaflet-container {
+    touch-action: pan-x pan-y;
+  }
 }

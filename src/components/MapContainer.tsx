@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import MapSidebar from './MapSidebar';
 import MapView from './MapView';
 import { Route, Marco, Present, Credenciado } from '../types/map';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const MapContainer = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -12,6 +12,7 @@ const MapContainer = () => {
   const [presents, setPresents] = useState<Present[]>([]);
   const [credenciados, setCredenciados] = useState<Credenciado[]>([]);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   // Carrega dados do localStorage
   useEffect(() => {
@@ -340,8 +341,8 @@ const MapContainer = () => {
   };
 
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+    <SidebarProvider defaultOpen={!isMobile}>
+      <div className="min-h-screen flex w-full relative">
         <MapSidebar
           routes={routes}
           currentRoute={currentRoute}
@@ -356,7 +357,7 @@ const MapContainer = () => {
           onAddCredenciado={addCredenciado}
           onRemoveCredenciado={removeCredenciado}
         />
-        <SidebarInset className="flex-1">
+        <SidebarInset className="flex-1 w-full">
           <MapView
             currentRoute={currentRoute}
             onAddMarco={addMarco}

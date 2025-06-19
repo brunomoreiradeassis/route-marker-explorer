@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Dialog,
@@ -10,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { MapPin, Clock, Navigation, Play } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface StartRaceModalProps {
   isOpen: boolean;
@@ -30,6 +30,8 @@ const StartRaceModal: React.FC<StartRaceModalProps> = ({
   duration,
   color
 }) => {
+  const isMobile = useIsMobile();
+
   const formatDistance = (meters: number) => {
     if (meters < 1000) {
       return `${Math.round(meters)} m`;
@@ -49,45 +51,45 @@ const StartRaceModal: React.FC<StartRaceModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={`${isMobile ? 'w-[95vw] max-w-[95vw]' : 'sm:max-w-md'} max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Navigation className="w-5 h-5" style={{ color }} />
+          <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Navigation className="w-4 h-4 sm:w-5 sm:h-5" style={{ color }} />
             Iniciar Corrida
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             Você está próximo ao ponto de início da rota "{routeName}". Deseja iniciar a corrida?
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4 space-y-4">
-          <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-            <h4 className="font-medium text-sm text-muted-foreground">Informações da Rota</h4>
+        <div className="py-2 sm:py-4 space-y-2 sm:space-y-4">
+          <div className="bg-muted/50 rounded-lg p-3 sm:p-4 space-y-2 sm:space-y-3">
+            <h4 className="font-medium text-xs sm:text-sm text-muted-foreground">Informações da Rota</h4>
             
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">Distância</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+                <span className="text-xs sm:text-sm">Distância</span>
               </div>
-              <span className="text-sm font-medium">{formatDistance(distance)}</span>
+              <span className="text-xs sm:text-sm font-medium">{formatDistance(distance)}</span>
             </div>
             
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">Tempo Estimado</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-muted-foreground" />
+                <span className="text-xs sm:text-sm">Tempo Estimado</span>
               </div>
-              <span className="text-sm font-medium">{formatDuration(duration)}</span>
+              <span className="text-xs sm:text-sm font-medium">{formatDuration(duration)}</span>
             </div>
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className={`gap-2 ${isMobile ? 'flex-col' : ''}`}>
+          <Button variant="outline" onClick={onClose} className={`${isMobile ? 'w-full' : ''} text-xs sm:text-sm`}>
             Cancelar
           </Button>
-          <Button onClick={onStartRace} className="gap-2">
-            <Play className="w-4 h-4" />
+          <Button onClick={onStartRace} className={`gap-1 sm:gap-2 ${isMobile ? 'w-full' : ''} text-xs sm:text-sm`}>
+            <Play className="w-3 h-3 sm:w-4 sm:h-4" />
             Iniciar Corrida
           </Button>
         </DialogFooter>
