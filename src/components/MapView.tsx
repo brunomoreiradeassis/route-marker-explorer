@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -462,7 +463,7 @@ const MapView: React.FC<MapViewProps> = ({
     };
   }, []);
 
-  // Atualiza marcadores de presentes - ALWAYS show them with better popups
+  // Atualiza marcadores de presentes - SEMPRE visíveis
   useEffect(() => {
     if (!map.current) return;
 
@@ -471,30 +472,37 @@ const MapView: React.FC<MapViewProps> = ({
       map.current?.removeLayer(marker);
     });
 
-    // Adiciona novos marcadores de presentes
+    // Adiciona novos marcadores de presentes - SEMPRE
     const newPresentMarkers: L.Marker[] = [];
     presents.forEach((present) => {
       console.log('Adicionando presente:', present.name, present.lat, present.lng);
       
       const markerColor = present.collected ? '#94a3b8' : '#eab308';
+      const presentIcon = present.type === 'moeda' ? '🪙' : 
+                         present.type === 'gema' ? '💎' : 
+                         present.type === 'pocao' ? '🧪' : 
+                         present.type === 'equipamento' ? '⚔️' : 
+                         present.type === 'chave' ? '🗝️' : '🎁';
+      
       const marker = L.marker([present.lat, present.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer;">🎁</div>`,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12]
+          html: `<div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transform: scale(1.1);">${presentIcon}</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
         })
       }).addTo(map.current!);
 
       const popupContent = `
-        <div style="min-width: 200px;">
-          <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #1f2937;">${present.name}</h3>
-          <p style="margin: 0 0 8px 0; color: #4b5563; font-size: 14px;">${present.description}</p>
-          <div style="margin: 4px 0;">
-            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; ${present.collected ? 'background-color: #f3f4f6; color: #6b7280;' : 'background-color: #fef3c7; color: #92400e;'}">${present.collected ? 'Coletado' : 'Disponível'}</span>
+        <div style="min-width: 220px; font-family: system-ui;">
+          <h3 style="margin: 0 0 10px 0; font-weight: bold; color: #1f2937; font-size: 16px;">${present.name}</h3>
+          <p style="margin: 0 0 10px 0; color: #4b5563; font-size: 14px; line-height: 1.4;">${present.description}</p>
+          <div style="margin: 6px 0; display: flex; gap: 8px; align-items: center;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: 600; ${present.collected ? 'background-color: #f3f4f6; color: #6b7280;' : 'background-color: #fef3c7; color: #92400e;'}">${presentIcon} ${present.collected ? 'Coletado' : 'Disponível'}</span>
+            ${present.value ? `<span style="color: #059669; font-weight: 600; font-size: 13px;">+${present.value} pts</span>` : ''}
           </div>
-          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-            Tipo: ${present.type === 'bonus' ? 'Bônus' : present.type === 'checkpoint' ? 'Checkpoint' : 'Especial'}
+          <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+            <strong>Tipo:</strong> ${getPresentTypeName(present.type)}
           </div>
         </div>
       `;
@@ -526,7 +534,7 @@ const MapView: React.FC<MapViewProps> = ({
     setPresentMarkers(newPresentMarkers);
   }, [presents, focusOnElement]);
 
-  // Atualiza marcadores de credenciados - ALWAYS show them with better popups
+  // Atualiza marcadores de credenciados - SEMPRE visíveis
   useEffect(() => {
     if (!map.current) return;
 
@@ -535,7 +543,7 @@ const MapView: React.FC<MapViewProps> = ({
       map.current?.removeLayer(marker);
     });
 
-    // Adiciona novos marcadores de credenciados
+    // Adiciona novos marcadores de credenciados - SEMPRE
     const newCredenciadoMarkers: L.Marker[] = [];
     credenciados.forEach((credenciado) => {
       const markerColor = getCredenciadoColor(credenciado.type);
@@ -544,21 +552,21 @@ const MapView: React.FC<MapViewProps> = ({
       const marker = L.marker([credenciado.lat, credenciado.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">${markerIcon}</div>`,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
+          html: `<div style="background-color: ${markerColor}; width: 32px; height: 32px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transform: scale(1.1);">${markerIcon}</div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
         })
       }).addTo(map.current!);
 
       const popupContent = `
-        <div style="min-width: 250px;">
-          <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #1f2937;">${credenciado.name}</h3>
-          <p style="margin: 0 0 8px 0; color: #4b5563; font-size: 14px;">${credenciado.description}</p>
-          ${credenciado.discount ? `<div style="margin: 4px 0; padding: 4px 8px; background-color: #d1fae5; border-radius: 6px; border: 1px solid #10b981;"><span style="color: #065f46; font-weight: bold; font-size: 13px;">💰 ${credenciado.discount}</span></div>` : ''}
-          ${credenciado.phone ? `<div style="margin: 4px 0; color: #374151; font-size: 13px;"><span style="font-weight: 500;">📞</span> ${credenciado.phone}</div>` : ''}
-          ${credenciado.address ? `<div style="margin: 4px 0; color: #374151; font-size: 13px;"><span style="font-weight: 500;">📍</span> ${credenciado.address}</div>` : ''}
-          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-            Categoria: ${getCredenciadoTypeName(credenciado.type)}
+        <div style="min-width: 280px; font-family: system-ui;">
+          <h3 style="margin: 0 0 10px 0; font-weight: bold; color: #1f2937; font-size: 16px;">${credenciado.name}</h3>
+          <p style="margin: 0 0 12px 0; color: #4b5563; font-size: 14px; line-height: 1.4;">${credenciado.description}</p>
+          ${credenciado.discount ? `<div style="margin: 6px 0; padding: 6px 12px; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 8px; border: 1px solid #10b981;"><span style="color: #065f46; font-weight: bold; font-size: 14px;">💰 ${credenciado.discount}</span></div>` : ''}
+          ${credenciado.phone ? `<div style="margin: 6px 0; color: #374151; font-size: 13px; display: flex; align-items: center; gap: 6px;"><span style="font-weight: 500;">📞</span> <a href="tel:${credenciado.phone}" style="color: #2563eb; text-decoration: none;">${credenciado.phone}</a></div>` : ''}
+          ${credenciado.address ? `<div style="margin: 6px 0; color: #374151; font-size: 13px; display: flex; align-items: flex-start; gap: 6px;"><span style="font-weight: 500;">📍</span> <span style="line-height: 1.3;">${credenciado.address}</span></div>` : ''}
+          <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+            <strong>Categoria:</strong> ${getCredenciadoTypeName(credenciado.type)}
           </div>
         </div>
       `;
@@ -590,7 +598,7 @@ const MapView: React.FC<MapViewProps> = ({
     setCredenciadoMarkers(newCredenciadoMarkers);
   }, [credenciados, focusOnElement]);
 
-  // Atualiza marcadores e rota quando a rota atual muda - com popups melhorados
+  // Atualiza marcadores e rota quando a rota atual muda - SEMPRE visível
   useEffect(() => {
     if (!map.current) return;
 
@@ -607,27 +615,30 @@ const MapView: React.FC<MapViewProps> = ({
       return;
     }
 
-    // Adiciona marcadores
+    // Adiciona marcadores SEMPRE - independente de seleção
     const newMarkers: L.Marker[] = [];
     currentRoute.marcos.forEach((marco) => {
       const markerColor = getMarcoColor(marco.type);
+      const markerIcon = marco.type === 'inicio' ? '🏁' : 
+                        marco.type === 'fim' ? '🏆' : '📍';
+      
       const marker = L.marker([marco.lat, marco.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); cursor: pointer;"></div>`,
-          iconSize: [20, 20],
-          iconAnchor: [10, 10]
+          html: `<div style="background-color: ${markerColor}; width: 26px; height: 26px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transform: scale(1.1);">${markerIcon}</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13]
         })
       }).addTo(map.current!);
 
       const popupContent = `
-        <div style="min-width: 180px;">
-          <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #1f2937;">${marco.name}</h3>
-          <div style="margin: 4px 0;">
-            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; background-color: ${markerColor}20; color: ${markerColor};">${getMarcoTypeName(marco.type)}</span>
+        <div style="min-width: 200px; font-family: system-ui;">
+          <h3 style="margin: 0 0 10px 0; font-weight: bold; color: #1f2937; font-size: 16px;">${marco.name}</h3>
+          <div style="margin: 6px 0; display: flex; align-items: center; gap: 6px;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: 600; background-color: ${markerColor}20; color: ${markerColor};">${markerIcon} ${getMarcoTypeName(marco.type)}</span>
           </div>
-          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-            Rota: ${currentRoute.name}
+          <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+            <strong>Rota:</strong> ${currentRoute.name}
           </div>
         </div>
       `;
@@ -670,8 +681,9 @@ const MapView: React.FC<MapViewProps> = ({
           // Desenha a nova rota usando as coordenadas da API ou linha reta
           const polyline = L.polyline(routeData.geometry, { 
             color: currentRoute.color, 
-            weight: 4,
-            opacity: 0.8
+            weight: 5,
+            opacity: 0.9,
+            dashArray: '10, 5'
           }).addTo(map.current!);
 
           // Adiciona event listener para foco na rota
@@ -729,6 +741,25 @@ const MapView: React.FC<MapViewProps> = ({
         return 'Fim';
       default:
         return 'Marco';
+    }
+  };
+
+  const getPresentTypeName = (type: string) => {
+    switch (type) {
+      case 'moeda':
+        return 'Moeda';
+      case 'gema':
+        return 'Gema';
+      case 'pocao':
+        return 'Poção';
+      case 'equipamento':
+        return 'Equipamento';
+      case 'chave':
+        return 'Chave';
+      case 'bonus':
+        return 'Bônus';
+      default:
+        return 'Especial';
     }
   };
 
@@ -1002,7 +1033,7 @@ const MapView: React.FC<MapViewProps> = ({
         />
         
         {/* Top controls container - positioned side by side */}
-        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-10 flex gap-2">
+        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-10 flex justify-between items-start gap-2">
           {/* Proximity Alerts - on the left */}
           {proximityAlerts.length > 0 && (
             <div className="w-48 sm:w-64">
@@ -1012,6 +1043,9 @@ const MapView: React.FC<MapViewProps> = ({
               />
             </div>
           )}
+          
+          {/* Spacer to push Map Type Selector to the right */}
+          <div className="flex-1"></div>
           
           {/* Map Type Selector - on the right */}
           <div className="w-48 sm:w-64">
