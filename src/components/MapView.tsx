@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -487,9 +486,9 @@ const MapView: React.FC<MapViewProps> = ({
       const marker = L.marker([present.lat, present.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transform: scale(1.1);">${presentIcon}</div>`,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14]
+          html: `<div style="background-color: ${markerColor}; width: 32px; height: 32px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transform: scale(1.1);">${presentIcon}</div>`,
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
         })
       }).addTo(map.current!);
 
@@ -502,7 +501,8 @@ const MapView: React.FC<MapViewProps> = ({
             ${present.value ? `<span style="color: #059669; font-weight: 600; font-size: 13px;">+${present.value} pts</span>` : ''}
           </div>
           <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-            <strong>Tipo:</strong> ${getPresentTypeName(present.type)}
+            <strong>Tipo:</strong> ${getPresentTypeName(present.type)}<br/>
+            <strong>Localização:</strong> ${present.lat.toFixed(6)}, ${present.lng.toFixed(6)}
           </div>
         </div>
       `;
@@ -552,9 +552,9 @@ const MapView: React.FC<MapViewProps> = ({
       const marker = L.marker([credenciado.lat, credenciado.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 32px; height: 32px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transform: scale(1.1);">${markerIcon}</div>`,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
+          html: `<div style="background-color: ${markerColor}; width: 36px; height: 36px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; transform: scale(1.1);">${markerIcon}</div>`,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
         })
       }).addTo(map.current!);
 
@@ -566,7 +566,8 @@ const MapView: React.FC<MapViewProps> = ({
           ${credenciado.phone ? `<div style="margin: 6px 0; color: #374151; font-size: 13px; display: flex; align-items: center; gap: 6px;"><span style="font-weight: 500;">📞</span> <a href="tel:${credenciado.phone}" style="color: #2563eb; text-decoration: none;">${credenciado.phone}</a></div>` : ''}
           ${credenciado.address ? `<div style="margin: 6px 0; color: #374151; font-size: 13px; display: flex; align-items: flex-start; gap: 6px;"><span style="font-weight: 500;">📍</span> <span style="line-height: 1.3;">${credenciado.address}</span></div>` : ''}
           <div style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-            <strong>Categoria:</strong> ${getCredenciadoTypeName(credenciado.type)}
+            <strong>Categoria:</strong> ${getCredenciadoTypeName(credenciado.type)}<br/>
+            <strong>Localização:</strong> ${credenciado.lat.toFixed(6)}, ${credenciado.lng.toFixed(6)}
           </div>
         </div>
       `;
@@ -619,15 +620,15 @@ const MapView: React.FC<MapViewProps> = ({
     const newMarkers: L.Marker[] = [];
     currentRoute.marcos.forEach((marco) => {
       const markerColor = getMarcoColor(marco.type);
-      const markerIcon = marco.type === 'inicio' ? '🏁' : 
+      const markerIcon = marco.type === 'inicio' ? '🚀' : 
                         marco.type === 'fim' ? '🏆' : '📍';
       
       const marker = L.marker([marco.lat, marco.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 26px; height: 26px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transform: scale(1.1);">${markerIcon}</div>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13]
+          html: `<div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transform: scale(1.1);">${markerIcon}</div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14]
         })
       }).addTo(map.current!);
 
@@ -638,7 +639,8 @@ const MapView: React.FC<MapViewProps> = ({
             <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: 600; background-color: ${markerColor}20; color: ${markerColor};">${markerIcon} ${getMarcoTypeName(marco.type)}</span>
           </div>
           <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
-            <strong>Rota:</strong> ${currentRoute.name}
+            <strong>Rota:</strong> ${currentRoute.name}<br/>
+            <strong>Localização:</strong> ${marco.lat.toFixed(6)}, ${marco.lng.toFixed(6)}
           </div>
         </div>
       `;
@@ -1033,10 +1035,10 @@ const MapView: React.FC<MapViewProps> = ({
         />
         
         {/* Top controls container - positioned side by side */}
-        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-10 flex justify-between items-start gap-2">
+        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 right-2 sm:right-4 z-10 flex justify-start items-start gap-2">
           {/* Proximity Alerts - on the left */}
           {proximityAlerts.length > 0 && (
-            <div className="w-48 sm:w-64">
+            <div className="w-40 sm:w-56">
               <ProximityAlert 
                 alerts={proximityAlerts} 
                 onFocus={(lat, lng) => focusOnElement(lat, lng)} 
@@ -1044,11 +1046,8 @@ const MapView: React.FC<MapViewProps> = ({
             </div>
           )}
           
-          {/* Spacer to push Map Type Selector to the right */}
-          <div className="flex-1"></div>
-          
-          {/* Map Type Selector - on the right */}
-          <div className="w-48 sm:w-64">
+          {/* Map Type Selector - next to proximity alerts */}
+          <div className="w-40 sm:w-56">
             <MapTypeSelector
               currentType={mapTileType}
               onTypeChange={setMapTileType}

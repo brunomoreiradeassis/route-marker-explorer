@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   Sidebar,
@@ -148,12 +149,46 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                   {routesOpen ? <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" /> : <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />}
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-1 sm:space-y-2 mt-1 sm:mt-2">
+                  {/* Botão para criar nova rota */}
+                  {!showNewRouteForm ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowNewRouteForm(true)}
+                      className="w-full mb-2"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Nova Rota
+                    </Button>
+                  ) : (
+                    <div className="space-y-2 mb-2 p-2 border rounded-lg">
+                      <Input
+                        placeholder="Nome da rota"
+                        value={newRouteName}
+                        onChange={(e) => setNewRouteName(e.target.value)}
+                        className="text-xs"
+                      />
+                      <div className="flex gap-1">
+                        <Button size="sm" onClick={handleCreateRoute} className="flex-1 text-xs">
+                          Criar
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => setShowNewRouteForm(false)}
+                          className="flex-1 text-xs"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                   <ScrollArea className={`${isMobile ? 'max-h-32' : 'max-h-48'}`}>
                     {routes.map((route) => (
                       <Card 
                         key={route.id} 
                         className={`cursor-pointer transition-colors hover:bg-muted/50 ${
-                          currentRoute?.id === route.id ? 'border-primary' : ''
+                          currentRoute?.id === route.id ? 'border-primary bg-primary/5' : ''
                         } mb-1 sm:mb-2`}
                         onClick={() => onSelectRoute(route)}
                       >
@@ -186,6 +221,12 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                         </CardContent>
                       </Card>
                     ))}
+                    
+                    {routes.length === 0 && (
+                      <div className="text-center py-4 text-muted-foreground text-xs">
+                        Nenhuma rota criada ainda
+                      </div>
+                    )}
                   </ScrollArea>
                 </CollapsibleContent>
               </Collapsible>
@@ -226,6 +267,12 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                         </CardContent>
                       </Card>
                     ))}
+                    
+                    {presents.length === 0 && (
+                      <div className="text-center py-4 text-muted-foreground text-xs">
+                        Nenhum presente criado ainda
+                      </div>
+                    )}
                   </ScrollArea>
                 </CollapsibleContent>
               </Collapsible>
@@ -240,7 +287,9 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                     <span className="font-medium text-xs sm:text-sm">Credenciados ({credenciados.length})</span>
                   </div>
                   {credenciadosOpen ? <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" /> : <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />}
-                </CollapsibleTrigger>
+                </CollapsibleTrig
+
+ger>
                 <CollapsibleContent className="space-y-1 sm:space-y-2 mt-1 sm:mt-2">
                   <ScrollArea className={`${isMobile ? 'max-h-32' : 'max-h-48'}`}>
                     {credenciados.map((credenciado) => (
@@ -268,20 +317,25 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                         </CardContent>
                       </Card>
                     ))}
+                    
+                    {credenciados.length === 0 && (
+                      <div className="text-center py-4 text-muted-foreground text-xs">
+                        Nenhum credenciado criado ainda
+                      </div>
+                    )}
                   </ScrollArea>
                 </CollapsibleContent>
               </Collapsible>
             </TabsContent>
 
             <TabsContent value="manage" className="mt-0 h-full">
-              {/* Manage content will be implemented here */}
               <div className={`${isMobile ? 'p-2' : 'p-4'}`}>
                 <p className="text-xs sm:text-sm text-muted-foreground">Funcionalidades de gerenciamento em desenvolvimento...</p>
               </div>
             </TabsContent>
           </Tabs>
         ) : (
-          // Collapsed sidebar - only show icons
+          // Collapsed sidebar - only show icons with no text
           <div className="p-2 space-y-4">
             <Button
               variant={activeTab === 'overview' ? "default" : "ghost"}
