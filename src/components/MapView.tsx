@@ -462,7 +462,7 @@ const MapView: React.FC<MapViewProps> = ({
     };
   }, []);
 
-  // Atualiza marcadores de presentes - ALWAYS show them
+  // Atualiza marcadores de presentes - ALWAYS show them with better popups
   useEffect(() => {
     if (!map.current) return;
 
@@ -486,9 +486,21 @@ const MapView: React.FC<MapViewProps> = ({
         })
       }).addTo(map.current!);
 
-      marker.bindPopup(`<b>${present.name}</b><br>${present.description}<br>${present.collected ? '<i>Coletado</i>' : '<i>Disponível</i>'}`);
+      const popupContent = `
+        <div style="min-width: 200px;">
+          <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #1f2937;">${present.name}</h3>
+          <p style="margin: 0 0 8px 0; color: #4b5563; font-size: 14px;">${present.description}</p>
+          <div style="margin: 4px 0;">
+            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; ${present.collected ? 'background-color: #f3f4f6; color: #6b7280;' : 'background-color: #fef3c7; color: #92400e;'}">${present.collected ? 'Coletado' : 'Disponível'}</span>
+          </div>
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+            Tipo: ${present.type === 'bonus' ? 'Bônus' : present.type === 'checkpoint' ? 'Checkpoint' : 'Especial'}
+          </div>
+        </div>
+      `;
       
-      // Adiciona event listeners para foco e menu de contexto
+      marker.bindPopup(popupContent);
+      
       marker.on('click', () => {
         focusOnElement(present.lat, present.lng);
       });
@@ -514,7 +526,7 @@ const MapView: React.FC<MapViewProps> = ({
     setPresentMarkers(newPresentMarkers);
   }, [presents, focusOnElement]);
 
-  // Atualiza marcadores de credenciados - ALWAYS show them
+  // Atualiza marcadores de credenciados - ALWAYS show them with better popups
   useEffect(() => {
     if (!map.current) return;
 
@@ -539,11 +551,16 @@ const MapView: React.FC<MapViewProps> = ({
       }).addTo(map.current!);
 
       const popupContent = `
-        <b>${credenciado.name}</b><br>
-        ${credenciado.description}<br>
-        ${credenciado.discount ? `<span style="color: green; font-weight: bold;">${credenciado.discount}</span><br>` : ''}
-        ${credenciado.phone ? `📞 ${credenciado.phone}<br>` : ''}
-        ${credenciado.address ? `📍 ${credenciado.address}` : ''}
+        <div style="min-width: 250px;">
+          <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #1f2937;">${credenciado.name}</h3>
+          <p style="margin: 0 0 8px 0; color: #4b5563; font-size: 14px;">${credenciado.description}</p>
+          ${credenciado.discount ? `<div style="margin: 4px 0; padding: 4px 8px; background-color: #d1fae5; border-radius: 6px; border: 1px solid #10b981;"><span style="color: #065f46; font-weight: bold; font-size: 13px;">💰 ${credenciado.discount}</span></div>` : ''}
+          ${credenciado.phone ? `<div style="margin: 4px 0; color: #374151; font-size: 13px;"><span style="font-weight: 500;">📞</span> ${credenciado.phone}</div>` : ''}
+          ${credenciado.address ? `<div style="margin: 4px 0; color: #374151; font-size: 13px;"><span style="font-weight: 500;">📍</span> ${credenciado.address}</div>` : ''}
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+            Categoria: ${getCredenciadoTypeName(credenciado.type)}
+          </div>
+        </div>
       `;
       
       marker.bindPopup(popupContent);
@@ -573,18 +590,9 @@ const MapView: React.FC<MapViewProps> = ({
     setCredenciadoMarkers(newCredenciadoMarkers);
   }, [credenciados, focusOnElement]);
 
-  // Atualiza marcadores e rota quando a rota atual muda
+  // Atualiza marcadores e rota quando a rota atual muda - com popups melhorados
   useEffect(() => {
-    if (!map.current || !currentRoute) {
-      // Remove marcadores e rotas se não há rota selecionada
-      routeMarkers.forEach(marker => marker.remove());
-      if (routePath) {
-        routePath.remove();
-      }
-      setRouteMarkers([]);
-      setRoutePath(null);
-      return;
-    }
+    if (!map.current) return;
 
     // Remove marcadores existentes da rota
     routeMarkers.forEach(marker => marker.remove());
@@ -592,7 +600,8 @@ const MapView: React.FC<MapViewProps> = ({
       routePath.remove();
     }
 
-    if (currentRoute.marcos.length === 0) {
+    // Se não há rota selecionada, não adiciona marcadores
+    if (!currentRoute || currentRoute.marcos.length === 0) {
       setRouteMarkers([]);
       setRoutePath(null);
       return;
@@ -611,9 +620,20 @@ const MapView: React.FC<MapViewProps> = ({
         })
       }).addTo(map.current!);
 
-      marker.bindPopup(`<b>${marco.name}</b><br>Tipo: ${getMarcoTypeName(marco.type)}`);
+      const popupContent = `
+        <div style="min-width: 180px;">
+          <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #1f2937;">${marco.name}</h3>
+          <div style="margin: 4px 0;">
+            <span style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; background-color: ${markerColor}20; color: ${markerColor};">${getMarcoTypeName(marco.type)}</span>
+          </div>
+          <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280;">
+            Rota: ${currentRoute.name}
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
       
-      // Adiciona event listeners para foco e menu de contexto
       marker.on('click', () => {
         focusOnElement(marco.lat, marco.lng);
       });
@@ -751,6 +771,27 @@ const MapView: React.FC<MapViewProps> = ({
         return '💪';
       default:
         return '🏪';
+    }
+  };
+
+  const getCredenciadoTypeName = (type: string) => {
+    switch (type) {
+      case 'restaurante':
+        return 'Restaurante';
+      case 'posto':
+        return 'Posto de Combustível';
+      case 'farmacia':
+        return 'Farmácia';
+      case 'supermercado':
+        return 'Supermercado';
+      case 'hotel':
+        return 'Hotel';
+      case 'pousada':
+        return 'Pousada';
+      case 'academia':
+        return 'Academia';
+      default:
+        return 'Estabelecimento';
     }
   };
 
@@ -960,23 +1001,26 @@ const MapView: React.FC<MapViewProps> = ({
           style={{ minHeight: '400px' }}
         />
         
-        {/* Seletor de tipo de mapa - repositioned to top-right */}
-        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-10 w-48 sm:w-64">
-          <MapTypeSelector
-            currentType={mapTileType}
-            onTypeChange={setMapTileType}
-          />
-        </div>
-        
-        {/* Proximity Alerts - repositioned below Map Type Selector */}
-        {proximityAlerts.length > 0 && (
-          <div className="absolute top-16 sm:top-20 right-2 sm:right-4 z-10 w-48 sm:w-64">
-            <ProximityAlert 
-              alerts={proximityAlerts} 
-              onFocus={(lat, lng) => focusOnElement(lat, lng)} 
+        {/* Top controls container - positioned side by side */}
+        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-10 flex gap-2">
+          {/* Proximity Alerts - on the left */}
+          {proximityAlerts.length > 0 && (
+            <div className="w-48 sm:w-64">
+              <ProximityAlert 
+                alerts={proximityAlerts} 
+                onFocus={(lat, lng) => focusOnElement(lat, lng)} 
+              />
+            </div>
+          )}
+          
+          {/* Map Type Selector - on the right */}
+          <div className="w-48 sm:w-64">
+            <MapTypeSelector
+              currentType={mapTileType}
+              onTypeChange={setMapTileType}
             />
           </div>
-        )}
+        </div>
         
         {/* Menu de contexto do mapa */}
         {contextMenu && (
