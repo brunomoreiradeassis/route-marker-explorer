@@ -100,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...profileData,
       email,
       visualizationRadius: 10, // Padrão de 10km
+      raioVisualizacao: 10, // Padrão de 10km
       createdAt: new Date()
     });
 
@@ -109,6 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...profileData,
       email,
       visualizationRadius: 10,
+      raioVisualizacao: 10,
       createdAt: new Date()
     });
   };
