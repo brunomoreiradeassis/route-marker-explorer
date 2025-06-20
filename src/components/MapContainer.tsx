@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import NavigationSidebar from './NavigationSidebar';
@@ -494,10 +493,10 @@ const MapContainer = () => {
   };
 
   return (
-    <div className="min-h-screen flex w-full">
-      <NavigationSidebar />
-      
-      <SidebarProvider defaultOpen={!isMobile}>
+    <SidebarProvider defaultOpen={!isMobile}>
+      <div className="min-h-screen flex w-full">
+        <NavigationSidebar />
+        
         <div className="flex-1 flex">
           <SidebarInset className="flex-1 relative">
             <MapView
@@ -539,8 +538,8 @@ const MapContainer = () => {
             onUpdateRoute={updateRoute}
           />
         </div>
-      </SidebarProvider>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 };
 

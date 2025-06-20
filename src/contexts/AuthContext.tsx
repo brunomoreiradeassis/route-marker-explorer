@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { 
   User as FirebaseUser, 
   createUserWithEmailAndPassword, 
@@ -56,10 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (user) {
         // Buscar perfil do usuário no Firestore
-        const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-        if (userDoc.exists()) {
-          setUserProfile({ id: user.uid, ...userDoc.data() } as User);
-        }
+        fetchUserProfile(user);
       } else {
         setUserProfile(null);
       }
@@ -68,6 +64,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return unsubscribe;
+  }, []);
+
+  const fetchUserProfile = useCallback(async (user: FirebaseUser) => {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setUserProfile({
+          id: user.uid,
+          email: userData.email,
+          name: userData.name,
+          cpf: userData.cpf,
+          phone: userData.phone,
+          birthDate: userData.birthDate,
+          userType: userData.userType,
+          visualizationRadius: userData.visualizationRadius || 10,
+          raioVisualizacao: userData.raioVisualizacao || userData.visualizationRadius || 10,
+          createdAt: userData.createdAt?.toDate() || new Date()
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
   }, []);
 
   const register = async (userData: RegisterData) => {

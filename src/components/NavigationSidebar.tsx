@@ -1,14 +1,6 @@
 
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Map, Settings, User, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -53,32 +45,32 @@ const NavigationSidebar = () => {
   ];
 
   return (
-    <Sidebar side="left" className="w-16 border-r">
-      <SidebarHeader className="p-2 border-b">
+    <div className="w-16 border-r bg-sidebar text-sidebar-foreground flex flex-col">
+      <div className="p-2 border-b">
         <div className="flex items-center justify-center">
           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
             <User className="h-4 w-4 text-primary-foreground" />
           </div>
         </div>
-      </SidebarHeader>
+      </div>
       
-      <SidebarContent className="p-2">
-        <SidebarMenu className="space-y-2">
+      <div className="p-2 flex-1">
+        <div className="space-y-2">
           {menuItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                onClick={item.onClick}
-                isActive={location.pathname === item.path}
-                className="w-full h-12 flex flex-col items-center justify-center gap-1"
-                tooltip={item.title}
-              >
-                <item.icon className="h-5 w-5" />
-                <span className="text-xs">{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <Button
+              key={item.title}
+              variant={location.pathname === item.path ? "default" : "ghost"}
+              size="sm"
+              onClick={item.onClick}
+              className="w-full h-12 flex flex-col items-center justify-center gap-1"
+              title={item.title}
+            >
+              <item.icon className="h-5 w-5" />
+              <span className="text-xs">{item.title}</span>
+            </Button>
           ))}
-        </SidebarMenu>
-      </SidebarContent>
+        </div>
+      </div>
       
       <div className="mt-auto p-2 border-t">
         <Button
@@ -92,7 +84,7 @@ const NavigationSidebar = () => {
           <span className="text-xs">Sair</span>
         </Button>
       </div>
-    </Sidebar>
+    </div>
   );
 };
 
