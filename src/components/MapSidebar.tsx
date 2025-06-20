@@ -287,9 +287,7 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                     <span className="font-medium text-xs sm:text-sm">Credenciados ({credenciados.length})</span>
                   </div>
                   {credenciadosOpen ? <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" /> : <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />}
-                </CollapsibleTrig
-
-ger>
+                </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-1 sm:space-y-2 mt-1 sm:mt-2">
                   <ScrollArea className={`${isMobile ? 'max-h-32' : 'max-h-48'}`}>
                     {credenciados.map((credenciado) => (
