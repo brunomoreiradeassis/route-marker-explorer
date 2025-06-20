@@ -91,12 +91,12 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
 
   const openInMaps = (lat: number, lng: number, name: string) => {
     const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const googleMapsWeb = `https://www.google.com/maps?q=${lat},${lng}&zoom=16`;
     
     if (isMobile) {
       const choice = confirm(`Abrir "${name}" em:\n\nOK = Google Maps\nCancelar = Waze`);
       if (choice) {
         const googleMapsApp = `comgooglemaps://?q=${lat},${lng}&zoom=16`;
-        const googleMapsWeb = `https://www.google.com/maps?q=${lat},${lng}&zoom=16`;
         window.open(googleMapsApp);
         setTimeout(() => window.open(googleMapsWeb), 500);
       } else {
@@ -105,7 +105,7 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
         setTimeout(() => window.open(googleMapsWeb), 500);
       }
     } else {
-      window.open(`https://www.google.com/maps?q=${lat},${lng}&zoom=16`, '_blank');
+      window.open(googleMapsWeb, '_blank');
     }
   };
 
@@ -215,7 +215,7 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                                   )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-1 flex-shrink-0">
+                              <div className="flex items-center gap-1">
                                 <Badge variant="outline" className="text-[10px] sm:text-xs h-4 sm:h-auto">
                                   {route.marcos.length} marcos
                                 </Badge>

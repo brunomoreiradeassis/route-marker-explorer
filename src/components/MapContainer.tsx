@@ -303,6 +303,29 @@ const MapContainer = () => {
     }
   };
 
+  const updateRoute = async (routeId: string, routeDetails: Partial<Route>) => {
+    if (!firestoreService) return;
+    
+    try {
+      await firestoreService.updateRoute(routeId, routeDetails);
+      
+      if (currentRoute?.id === routeId) {
+        setCurrentRoute({ ...currentRoute, ...routeDetails });
+      }
+
+      toast({
+        title: "Rota atualizada",
+        description: "Detalhes da rota atualizados com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar rota",
+        variant: "destructive"
+      });
+    }
+  };
+
   const updateMarco = async (updatedMarco: Marco) => {
     if (!currentRoute || !firestoreService) return;
 
@@ -480,6 +503,7 @@ const MapContainer = () => {
           onRemovePresent={removePresent}
           onAddCredenciado={addCredenciado}
           onRemoveCredenciado={removeCredenciado}
+          onUpdateRoute={updateRoute}
         />
         <SidebarInset className="flex-1 w-full">
           <div className="absolute top-4 right-4 z-10">
