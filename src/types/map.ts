@@ -1,4 +1,3 @@
-
 export interface Marco {
   id: string;
   name: string;
@@ -18,6 +17,7 @@ export interface Present {
   lng: number;
   collected?: boolean;
   value?: number;
+  radius?: number; // Raio de coleta em metros
 }
 
 export type CredenciadoType = 'restaurante' | 'posto' | 'farmacia' | 'supermercado' | 'hotel' | 'pousada' | 'academia';
