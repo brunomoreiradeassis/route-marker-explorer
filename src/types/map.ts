@@ -1,4 +1,3 @@
-
 export interface Marco {
   id: string;
   name: string;
@@ -47,14 +46,14 @@ export interface Route {
 
 export interface User {
   id: string;
+  name: string;
   email: string;
-  nomeCompleto: string;
   cpf: string;
-  telefone: string;
-  dataNascimento: string;
-  raioVisualizacao: number;
+  phone: string;
+  birthDate: string;
+  userType: 'cliente' | 'transportadora';
+  visualizationRadius: number;
   createdAt: Date;
-  updatedAt: Date;
 }
 
 export interface MapContextMenuProps {

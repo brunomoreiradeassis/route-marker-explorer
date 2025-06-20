@@ -2,68 +2,100 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User as FirebaseUser, 
+  createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  signOut,
+  signOut, 
   onAuthStateChanged,
-  updateEmail,
-  updatePassword
+  updatePassword,
+  updateEmail
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { User } from '../types/map';
 
-interface UserRegistrationData {
-  email: string;
-  password: string;
-  nomeCompleto: string;
-  cpf: string;
-  telefone: string;
-  dataNascimento: string;
-}
-
 interface AuthContextType {
   currentUser: FirebaseUser | null;
-  userData: User | null;
-  loading: boolean;
+  userProfile: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (data: UserRegistrationData) => Promise<void>;
+  register: (userData: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateUserProfile: (data: Partial<User>) => Promise<void>;
-  changePassword: (newPassword: string) => Promise<void>;
+  updateUserPassword: (newPassword: string) => Promise<void>;
+  updateUserEmail: (newEmail: string) => Promise<void>;
+  loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+interface RegisterData {
+  email: string;
+  password: string;
+  name: string;
+  cpf: string;
+  phone: string;
+  birthDate: string;
+  userType: 'cliente' | 'transportadora';
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [userData, setUserData] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      
+      if (user) {
+        // Buscar perfil do usuário no Firestore
+        const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
+        if (userDoc.exists()) {
+          setUserProfile({ id: user.uid, ...userDoc.data() } as User);
+        }
+      } else {
+        setUserProfile(null);
+      }
+      
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const register = async (userData: RegisterData) => {
+    const { email, password, ...profileData } = userData;
+    
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Salvar dados do usuário no Firestore
+    await setDoc(doc(db, 'usuarios', user.uid), {
+      ...profileData,
+      email,
+      visualizationRadius: 10, // Padrão de 10km
+      createdAt: new Date()
+    });
+
+    // Atualizar o perfil local
+    setUserProfile({
+      id: user.uid,
+      ...profileData,
+      email,
+      visualizationRadius: 10,
+      createdAt: new Date()
+    });
+  };
 
   const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const register = async (data: UserRegistrationData) => {
-    const { user } = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    
-    const userData: User = {
-      id: user.uid,
-      email: data.email,
-      nomeCompleto: data.nomeCompleto,
-      cpf: data.cpf,
-      telefone: data.telefone,
-      dataNascimento: data.dataNascimento,
-      raioVisualizacao: 10, // 10km padrão
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    await setDoc(doc(db, 'usuarios', user.uid), userData);
   };
 
   const logout = async () => {
@@ -71,66 +103,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateUserProfile = async (data: Partial<User>) => {
-    if (!currentUser) return;
+    if (!currentUser) throw new Error('Usuário não autenticado');
+
+    await updateDoc(doc(db, 'usuarios', currentUser.uid), data);
     
-    const userRef = doc(db, 'usuarios', currentUser.uid);
-    const updateData = {
-      ...data,
-      updatedAt: new Date()
-    };
-    
-    await updateDoc(userRef, updateData);
-    
-    if (data.email && data.email !== currentUser.email) {
-      await updateEmail(currentUser, data.email);
-    }
-    
-    // Atualizar estado local
-    if (userData) {
-      setUserData({ ...userData, ...updateData });
+    if (userProfile) {
+      setUserProfile({ ...userProfile, ...data });
     }
   };
 
-  const changePassword = async (newPassword: string) => {
-    if (!currentUser) return;
+  const updateUserPassword = async (newPassword: string) => {
+    if (!currentUser) throw new Error('Usuário não autenticado');
     await updatePassword(currentUser, newPassword);
   };
 
-  const fetchUserData = async (uid: string) => {
-    const userDoc = await getDoc(doc(db, 'usuarios', uid));
-    if (userDoc.exists()) {
-      setUserData({ id: uid, ...userDoc.data() } as User);
+  const updateUserEmail = async (newEmail: string) => {
+    if (!currentUser) throw new Error('Usuário não autenticado');
+    await updateEmail(currentUser, newEmail);
+    await updateDoc(doc(db, 'usuarios', currentUser.uid), { email: newEmail });
+    
+    if (userProfile) {
+      setUserProfile({ ...userProfile, email: newEmail });
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      if (user) {
-        fetchUserData(user.uid);
-      } else {
-        setUserData(null);
-      }
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
-
   const value = {
     currentUser,
-    userData,
-    loading,
+    userProfile,
     login,
     register,
     logout,
     updateUserProfile,
-    changePassword
+    updateUserPassword,
+    updateUserEmail,
+    loading
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

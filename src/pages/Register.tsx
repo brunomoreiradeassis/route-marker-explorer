@@ -1,80 +1,40 @@
 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { MapPin } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    nomeCompleto: '',
     cpf: '',
-    telefone: '',
-    dataNascimento: ''
+    phone: '',
+    birthDate: '',
+    userType: 'cliente' as 'cliente' | 'transportadora'
   });
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  const formatCPF = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d)/, '$1.$2')
-      .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-      .replace(/(-\d{2})\d+?$/, '$1');
-  };
-
-  const formatPhone = (value: string) => {
-    return value
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .replace(/(-\d{4})\d+?$/, '$1');
-  };
-
-  const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCPF(e.target.value);
-    setFormData(prev => ({ ...prev, cpf: formatted }));
-  };
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPhone(e.target.value);
-    setFormData(prev => ({ ...prev, telefone: formatted }));
-  };
-
-  const validateForm = () => {
-    if (!formData.email || !formData.password || !formData.confirmPassword || 
-        !formData.nomeCompleto || !formData.cpf || !formData.telefone || !formData.dataNascimento) {
-      toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos",
-        variant: "destructive"
-      });
-      return false;
-    }
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Erro",
         description: "As senhas não coincidem",
         variant: "destructive"
       });
-      return false;
+      return;
     }
 
     if (formData.password.length < 6) {
@@ -83,151 +43,173 @@ const Register = () => {
         description: "A senha deve ter pelo menos 6 caracteres",
         variant: "destructive"
       });
-      return false;
+      return;
     }
-
-    if (formData.cpf.replace(/\D/g, '').length !== 11) {
-      toast({
-        title: "Erro",
-        description: "CPF deve ter 11 dígitos",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
 
     setLoading(true);
     try {
       await register({
+        name: formData.name,
         email: formData.email,
         password: formData.password,
-        nomeCompleto: formData.nomeCompleto,
         cpf: formData.cpf,
-        telefone: formData.telefone,
-        dataNascimento: formData.dataNascimento
+        phone: formData.phone,
+        birthDate: formData.birthDate,
+        userType: formData.userType
       });
-      navigate('/');
+      
       toast({
         title: "Sucesso",
         description: "Conta criada com sucesso!"
       });
+      
+      navigate('/');
     } catch (error: any) {
       toast({
-        title: "Erro no cadastro",
+        title: "Erro",
         description: error.message || "Erro ao criar conta",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <MapPin className="h-12 w-12 text-blue-600" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Mapa Interativo</CardTitle>
-          <p className="text-gray-600">Crie sua conta</p>
+        <CardHeader>
+          <CardTitle>Criar Conta</CardTitle>
+          <CardDescription>
+            Preencha os dados para criar sua conta
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <Label htmlFor="name">Nome Completo</Label>
               <Input
-                name="nomeCompleto"
+                id="name"
+                name="name"
                 type="text"
-                placeholder="Nome Completo"
-                value={formData.nomeCompleto}
+                value={formData.name}
                 onChange={handleChange}
                 required
               />
             </div>
+
             <div>
+              <Label htmlFor="email">Email</Label>
               <Input
-                name="cpf"
-                type="text"
-                placeholder="CPF"
-                value={formData.cpf}
-                onChange={handleCPFChange}
-                maxLength={14}
-                required
-              />
-            </div>
-            <div>
-              <Input
-                name="telefone"
-                type="text"
-                placeholder="Telefone"
-                value={formData.telefone}
-                onChange={handlePhoneChange}
-                maxLength={15}
-                required
-              />
-            </div>
-            <div>
-              <Input
-                name="dataNascimento"
-                type="date"
-                placeholder="Data de Nascimento"
-                value={formData.dataNascimento}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div>
-              <Input
+                id="email"
                 name="email"
                 type="email"
-                placeholder="Email"
                 value={formData.email}
                 onChange={handleChange}
                 required
               />
             </div>
+
             <div>
+              <Label htmlFor="cpf">CPF</Label>
               <Input
+                id="cpf"
+                name="cpf"
+                type="text"
+                value={formData.cpf}
+                onChange={handleChange}
+                placeholder="000.000.000-00"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="(00) 00000-0000"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="birthDate">Data de Nascimento</Label>
+              <Input
+                id="birthDate"
+                name="birthDate"
+                type="date"
+                value={formData.birthDate}
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            <div>
+              <Label>Tipo de Usuário</Label>
+              <RadioGroup
+                value={formData.userType}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, userType: value as 'cliente' | 'transportadora' }))}
+                className="flex flex-col space-y-2 mt-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="cliente" id="cliente" />
+                  <Label htmlFor="cliente">Cliente</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="transportadora" id="transportadora" />
+                  <Label htmlFor="transportadora">Transportadora</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
                 name="password"
                 type="password"
-                placeholder="Senha"
                 value={formData.password}
                 onChange={handleChange}
                 required
               />
             </div>
+
             <div>
+              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
               <Input
+                id="confirmPassword"
                 name="confirmPassword"
                 type="password"
-                placeholder="Confirmar Senha"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
               />
             </div>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={loading}
-            >
-              {loading ? 'Criando conta...' : 'Criar conta'}
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Criando conta...' : 'Criar Conta'}
             </Button>
+
+            <div className="text-center">
+              <span className="text-sm text-gray-600">
+                Já tem uma conta?{' '}
+                <Link to="/login" className="font-medium text-primary hover:underline">
+                  Fazer login
+                </Link>
+              </span>
+            </div>
           </form>
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
-              Já tem uma conta?{' '}
-              <Link to="/login" className="text-blue-600 hover:underline">
-                Entre aqui
-              </Link>
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

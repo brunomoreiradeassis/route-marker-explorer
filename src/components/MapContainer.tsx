@@ -1,14 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import MapSidebar from './MapSidebar';
+import NavigationSidebar from './NavigationSidebar';
+import RightSidebar from './RightSidebar';
 import MapView from './MapView';
 import { Route, Marco, Present, Credenciado } from '../types/map';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FirestoreService } from '../services/firestoreService';
 import { useAuth } from '../contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
 
 const MapContainer = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -21,7 +21,7 @@ const MapContainer = () => {
   } | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const [firestoreService, setFirestoreService] = useState<FirestoreService | null>(null);
 
   useEffect(() => {
@@ -53,7 +53,15 @@ const MapContainer = () => {
         service.getCredenciados()
       ]);
       
-      setRoutes(routesData);
+      // Filtrar dados baseado no tipo de usuário
+      if (userProfile?.userType === 'cliente') {
+        // Clientes veem apenas suas próprias rotas
+        setRoutes(routesData.filter(route => route.createdBy === currentUser?.uid));
+      } else {
+        // Transportadoras veem todas as rotas
+        setRoutes(routesData);
+      }
+      
       setPresents(presentsData);
       setCredenciados(credenciadosData);
       
@@ -486,59 +494,53 @@ const MapContainer = () => {
   };
 
   return (
-    <SidebarProvider defaultOpen={!isMobile}>
-      <div className="min-h-screen flex w-full relative">
-        <MapSidebar
-          routes={routes}
-          currentRoute={currentRoute}
-          presents={presents}
-          credenciados={credenciados}
-          onCreateRoute={createNewRoute}
-          onSelectRoute={selectRoute}
-          onSelectPresent={selectPresent}
-          onSelectCredenciado={selectCredenciado}
-          onRemoveRoute={removeRoute}
-          onRemoveMarco={removeMarco}
-          onAddPresent={addPresent}
-          onRemovePresent={removePresent}
-          onAddCredenciado={addCredenciado}
-          onRemoveCredenciado={removeCredenciado}
-          onUpdateRoute={updateRoute}
-        />
-        <SidebarInset className="flex-1 w-full">
-          <div className="absolute top-4 right-4 z-10">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Sair
-            </Button>
-          </div>
-          <MapView
+    <div className="min-h-screen flex w-full">
+      <NavigationSidebar />
+      
+      <SidebarProvider defaultOpen={!isMobile}>
+        <div className="flex-1 flex">
+          <SidebarInset className="flex-1 relative">
+            <MapView
+              currentRoute={currentRoute}
+              selectedElement={selectedElement}
+              onAddMarco={addMarco}
+              presents={presents}
+              credenciados={credenciados}
+              onAddPresent={addPresent}
+              onAddCredenciado={addCredenciado}
+              onCollectPresent={collectPresent}
+              onUpdateMarco={updateMarco}
+              onUpdatePresent={updatePresent}
+              onUpdateCredenciado={updateCredenciado}
+              onDeleteMarco={removeMarco}
+              onDeletePresent={removePresent}
+              onDeleteCredenciado={removeCredenciado}
+              onCloneMarco={cloneMarco}
+              onClonePresent={clonePresent}
+              onCloneCredenciado={cloneCredenciado}
+            />
+          </SidebarInset>
+          
+          <RightSidebar
+            routes={routes}
             currentRoute={currentRoute}
-            selectedElement={selectedElement}
-            onAddMarco={addMarco}
             presents={presents}
             credenciados={credenciados}
+            onCreateRoute={createNewRoute}
+            onSelectRoute={selectRoute}
+            onSelectPresent={selectPresent}
+            onSelectCredenciado={selectCredenciado}
+            onRemoveRoute={removeRoute}
+            onRemoveMarco={removeMarco}
             onAddPresent={addPresent}
+            onRemovePresent={removePresent}
             onAddCredenciado={addCredenciado}
-            onCollectPresent={collectPresent}
-            onUpdateMarco={updateMarco}
-            onUpdatePresent={updatePresent}
-            onUpdateCredenciado={updateCredenciado}
-            onDeleteMarco={removeMarco}
-            onDeletePresent={removePresent}
-            onDeleteCredenciado={removeCredenciado}
-            onCloneMarco={cloneMarco}
-            onClonePresent={clonePresent}
-            onCloneCredenciado={cloneCredenciado}
+            onRemoveCredenciado={removeCredenciado}
+            onUpdateRoute={updateRoute}
           />
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+        </div>
+      </SidebarProvider>
+    </div>
   );
 };
 
