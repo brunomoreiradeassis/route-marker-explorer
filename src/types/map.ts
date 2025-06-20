@@ -39,6 +39,22 @@ export interface Route {
   name: string;
   marcos: Marco[];
   color: string;
+  valorProposto?: number;
+  descricao?: string;
+  prazoEntrega?: string;
+  observacoes?: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  nomeCompleto: string;
+  cpf: string;
+  telefone: string;
+  dataNascimento: string;
+  raioVisualizacao: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface MapContextMenuProps {
