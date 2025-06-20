@@ -1,3 +1,4 @@
+
 export interface Marco {
   id: string;
   name: string;
@@ -42,6 +43,7 @@ export interface Route {
   descricao?: string;
   prazoEntrega?: string;
   observacoes?: string;
+  createdBy?: string;
 }
 
 export interface User {
@@ -53,6 +55,7 @@ export interface User {
   birthDate: string;
   userType: 'cliente' | 'transportadora';
   visualizationRadius: number;
+  raioVisualizacao: number;
   createdAt: Date;
 }
 

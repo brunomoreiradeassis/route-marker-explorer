@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,18 +10,18 @@ import { useToast } from '@/hooks/use-toast';
 import { User, Settings, Lock } from 'lucide-react';
 
 const UserSettings = () => {
-  const { userData, updateUserProfile, changePassword } = useAuth();
+  const { userProfile, updateUserProfile, updateUserPassword } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
 
   const [profileData, setProfileData] = useState({
-    nomeCompleto: userData?.nomeCompleto || '',
-    email: userData?.email || '',
-    telefone: userData?.telefone || '',
-    cpf: userData?.cpf || '',
-    dataNascimento: userData?.dataNascimento || '',
-    raioVisualizacao: userData?.raioVisualizacao || 10
+    nomeCompleto: userProfile?.name || '',
+    email: userProfile?.email || '',
+    telefone: userProfile?.phone || '',
+    cpf: userProfile?.cpf || '',
+    dataNascimento: userProfile?.birthDate || '',
+    raioVisualizacao: userProfile?.raioVisualizacao || 10
   });
 
   const [passwordData, setPasswordData] = useState({
@@ -82,7 +81,14 @@ const UserSettings = () => {
     setLoading(true);
 
     try {
-      await updateUserProfile(profileData);
+      await updateUserProfile({
+        name: profileData.nomeCompleto,
+        email: profileData.email,
+        phone: profileData.telefone,
+        cpf: profileData.cpf,
+        birthDate: profileData.dataNascimento,
+        raioVisualizacao: profileData.raioVisualizacao
+      });
       toast({
         title: "Sucesso",
         description: "Perfil atualizado com sucesso!"
@@ -122,7 +128,7 @@ const UserSettings = () => {
     setPasswordLoading(true);
 
     try {
-      await changePassword(passwordData.newPassword);
+      await updateUserPassword(passwordData.newPassword);
       setPasswordData({ newPassword: '', confirmPassword: '' });
       toast({
         title: "Sucesso",

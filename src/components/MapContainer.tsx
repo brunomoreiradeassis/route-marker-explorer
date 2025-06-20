@@ -21,7 +21,7 @@ const MapContainer = () => {
   } | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, logout } = useAuth();
   const [firestoreService, setFirestoreService] = useState<FirestoreService | null>(null);
 
   useEffect(() => {
