@@ -24,6 +24,10 @@ L.Icon.Default.mergeOptions({
 
 interface MapViewProps {
   currentRoute: Route | null;
+  selectedElement?: {
+    type: 'route' | 'present' | 'credenciado';
+    data: Route | Present | Credenciado;
+  } | null;
   onAddMarco: (marco: Omit<Marco, 'id'>) => void;
   presents: Present[];
   credenciados: Credenciado[];
@@ -43,6 +47,7 @@ interface MapViewProps {
 
 const MapView: React.FC<MapViewProps> = ({
   currentRoute,
+  selectedElement,
   onAddMarco,
   presents,
   credenciados,
@@ -86,7 +91,7 @@ const MapView: React.FC<MapViewProps> = ({
   const [showStartRaceModal, setShowStartRaceModal] = useState(false);
   const [raceStarted, setRaceStarted] = useState(false);
   const [nearbyPresent, setNearbyPresent] = useState<Present | null>(null);
-  const [mapTileType, setMapTileType] = useState<MapTileType>('openstreetmap');
+  const [mapTileType, setMapTileType] = useState<MapTileType>('satellite'); // Iniciando com satélite
   const [tileLayer, setTileLayer] = useState<L.TileLayer | null>(null);
   const [editModal, setEditModal] = useState<{
     isOpen: boolean;
@@ -626,7 +631,7 @@ const MapView: React.FC<MapViewProps> = ({
       const marker = L.marker([marco.lat, marco.lng], {
         icon: L.divIcon({
           className: 'custom-marker',
-          html: `<div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transform: scale(1.1);">${markerIcon}</div>`,
+          html: `<div style="background-color: ${markerColor}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transform: scale(1.1);">${markerIcon}</div>`,
           iconSize: [28, 28],
           iconAnchor: [14, 14]
         })
@@ -1002,6 +1007,20 @@ const MapView: React.FC<MapViewProps> = ({
       description: "Alterações salvas com sucesso!"
     });
   }, [editModal.element, onUpdateMarco, onUpdatePresent, onUpdateCredenciado, toast]);
+
+  // Focus on selected element
+  useEffect(() => {
+    if (selectedElement && map.current) {
+      const element = selectedElement.data;
+      if ('lat' in element && 'lng' in element) {
+        focusOnElement(element.lat, element.lng);
+      } else if (selectedElement.type === 'route' && (element as Route).marcos.length > 0) {
+        const route = element as Route;
+        const bounds = L.latLngBounds(route.marcos.map(marco => [marco.lat, marco.lng]));
+        map.current.fitBounds(bounds, { padding: [20, 20] });
+      }
+    }
+  }, [selectedElement, focusOnElement]);
 
   return (
     <div className="flex-1 flex flex-col h-full">

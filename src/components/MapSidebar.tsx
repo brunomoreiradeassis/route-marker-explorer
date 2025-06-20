@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Sidebar,
@@ -43,6 +42,8 @@ interface MapSidebarProps {
   credenciados: Credenciado[];
   onCreateRoute: (name: string) => void;
   onSelectRoute: (route: Route) => void;
+  onSelectPresent: (present: Present) => void;
+  onSelectCredenciado: (credenciado: Credenciado) => void;
   onRemoveRoute: (routeId: string) => void;
   onRemoveMarco: (marcoId: string) => void;
   onAddPresent: (present: Omit<Present, 'id'>) => void;
@@ -58,6 +59,8 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
   credenciados,
   onCreateRoute,
   onSelectRoute,
+  onSelectPresent,
+  onSelectCredenciado,
   onRemoveRoute,
   onRemoveMarco,
   onAddPresent,
@@ -113,6 +116,30 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
         return 'Academia';
       default:
         return 'Estabelecimento';
+    }
+  };
+
+  const openInMaps = (lat: number, lng: number, name: string) => {
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Try to open in Google Maps app first, then fallback to web
+      const googleMapsApp = `comgooglemaps://?q=${lat},${lng}&zoom=16`;
+      const googleMapsWeb = `https://www.google.com/maps?q=${lat},${lng}&zoom=16`;
+      const wazeApp = `waze://?ll=${lat},${lng}&navigate=yes`;
+      
+      // Create a menu for mobile users
+      const choice = confirm(`Abrir "${name}" em:\n\nOK = Google Maps\nCancelar = Waze`);
+      if (choice) {
+        window.open(googleMapsApp);
+        setTimeout(() => window.open(googleMapsWeb), 500);
+      } else {
+        window.open(wazeApp);
+        setTimeout(() => window.open(googleMapsWeb), 500);
+      }
+    } else {
+      // Desktop - open Google Maps web
+      window.open(`https://www.google.com/maps?q=${lat},${lng}&zoom=16`, '_blank');
     }
   };
 
@@ -245,7 +272,11 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                 <CollapsibleContent className="space-y-1 sm:space-y-2 mt-1 sm:mt-2">
                   <ScrollArea className={`${isMobile ? 'max-h-32' : 'max-h-48'}`}>
                     {presents.map((present) => (
-                      <Card key={present.id} className="hover:bg-muted/50 mb-1 sm:mb-2">
+                      <Card 
+                        key={present.id} 
+                        className="hover:bg-muted/50 mb-1 sm:mb-2 cursor-pointer"
+                        onClick={() => onSelectPresent(present)}
+                      >
                         <CardContent className="p-2 sm:p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -255,14 +286,31 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                                 <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{present.description}</p>
                               </div>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-5 w-5 sm:h-6 sm:w-6 p-0 flex-shrink-0"
-                              onClick={() => onRemovePresent(present.id)}
-                            >
-                              <Trash2 className="h-2 w-2 sm:h-3 sm:w-3" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 w-5 sm:h-6 sm:w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openInMaps(present.lat, present.lng, present.name);
+                                }}
+                                title="Abrir no mapa"
+                              >
+                                <MapPin className="h-2 w-2 sm:h-3 sm:w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 w-5 sm:h-6 sm:w-6 p-0 flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRemovePresent(present.id);
+                                }}
+                              >
+                                <Trash2 className="h-2 w-2 sm:h-3 sm:w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -291,7 +339,11 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                 <CollapsibleContent className="space-y-1 sm:space-y-2 mt-1 sm:mt-2">
                   <ScrollArea className={`${isMobile ? 'max-h-32' : 'max-h-48'}`}>
                     {credenciados.map((credenciado) => (
-                      <Card key={credenciado.id} className="hover:bg-muted/50 mb-1 sm:mb-2">
+                      <Card 
+                        key={credenciado.id} 
+                        className="hover:bg-muted/50 mb-1 sm:mb-2 cursor-pointer"
+                        onClick={() => onSelectCredenciado(credenciado)}
+                      >
                         <CardContent className="p-2 sm:p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -303,14 +355,31 @@ const MapSidebar: React.FC<MapSidebarProps> = ({
                                 </p>
                               </div>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-5 w-5 sm:h-6 sm:w-6 p-0 flex-shrink-0"
-                              onClick={() => onRemoveCredenciado(credenciado.id)}
-                            >
-                              <Trash2 className="h-2 w-2 sm:h-3 sm:w-3" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 w-5 sm:h-6 sm:w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openInMaps(credenciado.lat, credenciado.lng, credenciado.name);
+                                }}
+                                title="Abrir no mapa"
+                              >
+                                <MapPin className="h-2 w-2 sm:h-3 sm:w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 w-5 sm:h-6 sm:w-6 p-0 flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRemoveCredenciado(credenciado.id);
+                                }}
+                              >
+                                <Trash2 className="h-2 w-2 sm:h-3 sm:w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>

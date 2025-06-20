@@ -5,116 +5,127 @@ import MapView from './MapView';
 import { Route, Marco, Present, Credenciado } from '../types/map';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { FirestoreService } from '../services/firestoreService';
+import { useAuth } from '../contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
 
 const MapContainer = () => {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [currentRoute, setCurrentRoute] = useState<Route | null>(null);
   const [presents, setPresents] = useState<Present[]>([]);
   const [credenciados, setCredenciados] = useState<Credenciado[]>([]);
+  const [selectedElement, setSelectedElement] = useState<{
+    type: 'route' | 'present' | 'credenciado';
+    data: Route | Present | Credenciado;
+  } | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { currentUser, logout } = useAuth();
+  const [firestoreService, setFirestoreService] = useState<FirestoreService | null>(null);
 
-  // Carrega dados do localStorage
   useEffect(() => {
-    const savedRoutes = localStorage.getItem('map-routes');
-    const savedPresents = localStorage.getItem('map-presents');
-    const savedCredenciados = localStorage.getItem('map-credenciados');
-    
-    if (savedRoutes) {
-      try {
-        const parsedRoutes = JSON.parse(savedRoutes);
-        setRoutes(parsedRoutes);
-        if (parsedRoutes.length > 0) {
-          setCurrentRoute(parsedRoutes[0]);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar rotas:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar rotas salvas",
-          variant: "destructive"
-        });
-      }
+    if (currentUser) {
+      const service = new FirestoreService(currentUser.uid);
+      setFirestoreService(service);
+      
+      // Load initial data
+      loadData(service);
+      
+      // Set up real-time listeners
+      const unsubscribeRoutes = service.subscribeToRoutes(setRoutes);
+      const unsubscribePresents = service.subscribeToPresents(setPresents);
+      const unsubscribeCredenciados = service.subscribeToCredenciados(setCredenciados);
+      
+      return () => {
+        unsubscribeRoutes();
+        unsubscribePresents();
+        unsubscribeCredenciados();
+      };
     }
+  }, [currentUser]);
 
-    if (savedPresents) {
-      try {
-        const parsedPresents = JSON.parse(savedPresents);
-        setPresents(parsedPresents);
-      } catch (error) {
-        console.error('Erro ao carregar presentes:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar presentes salvos",
-          variant: "destructive"
-        });
-      }
-    }
-
-    if (savedCredenciados) {
-      try {
-        const parsedCredenciados = JSON.parse(savedCredenciados);
-        setCredenciados(parsedCredenciados);
-      } catch (error) {
-        console.error('Erro ao carregar credenciados:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar credenciados salvos",
-          variant: "destructive"
-        });
-      }
-    }
-  }, []);
-
-  // Salva dados no localStorage
-  const saveData = (newRoutes: Route[], newPresents?: Present[], newCredenciados?: Credenciado[]) => {
+  const loadData = async (service: FirestoreService) => {
     try {
-      localStorage.setItem('map-routes', JSON.stringify(newRoutes));
-      setRoutes(newRoutes);
+      const [routesData, presentsData, credenciadosData] = await Promise.all([
+        service.getRoutes(),
+        service.getPresents(),
+        service.getCredenciados()
+      ]);
       
-      if (newPresents) {
-        localStorage.setItem('map-presents', JSON.stringify(newPresents));
-        setPresents(newPresents);
-      }
+      setRoutes(routesData);
+      setPresents(presentsData);
+      setCredenciados(credenciadosData);
       
-      if (newCredenciados) {
-        localStorage.setItem('map-credenciados', JSON.stringify(newCredenciados));
-        setCredenciados(newCredenciados);
+      if (routesData.length > 0) {
+        setCurrentRoute(routesData[0]);
       }
     } catch (error) {
-      console.error('Erro ao salvar dados:', error);
+      console.error('Erro ao carregar dados:', error);
       toast({
         title: "Erro",
-        description: "Erro ao salvar dados",
+        description: "Erro ao carregar dados do servidor",
         variant: "destructive"
       });
     }
   };
 
-  const createNewRoute = (name: string) => {
-    const newRoute: Route = {
-      id: Date.now().toString(),
-      name,
-      marcos: [],
-      color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`
-    };
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast({
+        title: "Logout realizado",
+        description: "Você foi desconectado com sucesso"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao fazer logout",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const createNewRoute = async (name: string) => {
+    if (!firestoreService) return;
     
-    const newRoutes = [...routes, newRoute];
-    saveData(newRoutes);
-    setCurrentRoute(newRoute);
-    
-    toast({
-      title: "Sucesso",
-      description: `Rota "${name}" criada com sucesso!`
-    });
+    try {
+      const newRoute: Omit<Route, 'id'> = {
+        name,
+        marcos: [],
+        color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`
+      };
+      
+      await firestoreService.addRoute(newRoute);
+      
+      toast({
+        title: "Sucesso",
+        description: `Rota "${name}" criada com sucesso!`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao criar rota",
+        variant: "destructive"
+      });
+    }
   };
 
   const selectRoute = (route: Route) => {
     setCurrentRoute(route);
+    setSelectedElement({ type: 'route', data: route });
   };
 
-  const addMarco = (marco: Omit<Marco, 'id'>) => {
-    if (!currentRoute) {
+  const selectPresent = (present: Present) => {
+    setSelectedElement({ type: 'present', data: present });
+  };
+
+  const selectCredenciado = (credenciado: Credenciado) => {
+    setSelectedElement({ type: 'credenciado', data: credenciado });
+  };
+
+  const addMarco = async (marco: Omit<Marco, 'id'>) => {
+    if (!currentRoute || !firestoreService) {
       toast({
         title: "Aviso",
         description: "Selecione uma rota primeiro!",
@@ -123,221 +134,332 @@ const MapContainer = () => {
       return;
     }
 
-    const newMarco: Marco = {
-      ...marco,
-      id: Date.now().toString()
-    };
+    try {
+      const newMarco: Marco = {
+        ...marco,
+        id: Date.now().toString()
+      };
 
-    const updatedRoute = {
-      ...currentRoute,
-      marcos: [...currentRoute.marcos, newMarco]
-    };
+      const updatedRoute = {
+        ...currentRoute,
+        marcos: [...currentRoute.marcos, newMarco]
+      };
 
-    const updatedRoutes = routes.map(r => 
-      r.id === currentRoute.id ? updatedRoute : r
-    );
+      await firestoreService.updateRoute(currentRoute.id, updatedRoute);
+      setCurrentRoute(updatedRoute);
 
-    saveData(updatedRoutes);
-    setCurrentRoute(updatedRoute);
-
-    toast({
-      title: "Marco adicionado",
-      description: `Marco "${marco.name}" adicionado à rota!`
-    });
-  };
-
-  const addPresent = (present: Omit<Present, 'id'>) => {
-    const newPresent: Present = {
-      ...present,
-      id: Date.now().toString(),
-      collected: false
-    };
-
-    const newPresents = [...presents, newPresent];
-    saveData(routes, newPresents);
-
-    toast({
-      title: "Presente adicionado",
-      description: `Presente "${present.name}" adicionado ao mapa!`
-    });
-  };
-
-  const removePresent = (presentId: string) => {
-    const updatedPresents = presents.filter(p => p.id !== presentId);
-    saveData(routes, updatedPresents);
-
-    toast({
-      title: "Presente removido",
-      description: "Presente removido com sucesso!"
-    });
-  };
-
-  const addCredenciado = (credenciado: Omit<Credenciado, 'id'>) => {
-    const newCredenciado: Credenciado = {
-      ...credenciado,
-      id: Date.now().toString(),
-    };
-
-    const newCredenciados = [...credenciados, newCredenciado];
-    saveData(routes, presents, newCredenciados);
-
-    toast({
-      title: "Credenciado adicionado",
-      description: `Estabelecimento "${credenciado.name}" adicionado ao mapa!`
-    });
-  };
-
-  const removeCredenciado = (credenciadoId: string) => {
-    const updatedCredenciados = credenciados.filter(c => c.id !== credenciadoId);
-    saveData(routes, presents, updatedCredenciados);
-
-    toast({
-      title: "Credenciado removido",
-      description: "Estabelecimento removido com sucesso!"
-    });
-  };
-
-  const collectPresent = (presentId: string) => {
-    const updatedPresents = presents.map(p => 
-      p.id === presentId ? { ...p, collected: true } : p
-    );
-    
-    saveData(routes, updatedPresents);
-  };
-
-  const removeMarco = (marcoId: string) => {
-    if (!currentRoute) return;
-
-    const updatedRoute = {
-      ...currentRoute,
-      marcos: currentRoute.marcos.filter(m => m.id !== marcoId)
-    };
-
-    const updatedRoutes = routes.map(r => 
-      r.id === currentRoute.id ? updatedRoute : r
-    );
-
-    saveData(updatedRoutes);
-    setCurrentRoute(updatedRoute);
-
-    toast({
-      title: "Marco removido",
-      description: "Marco removido com sucesso!"
-    });
-  };
-
-  const removeRoute = (routeId: string) => {
-    const updatedRoutes = routes.filter(r => r.id !== routeId);
-    saveData(updatedRoutes);
-    
-    if (currentRoute?.id === routeId) {
-      setCurrentRoute(updatedRoutes.length > 0 ? updatedRoutes[0] : null);
+      toast({
+        title: "Marco adicionado",
+        description: `Marco "${marco.name}" adicionado à rota!`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar marco",
+        variant: "destructive"
+      });
     }
-
-    toast({
-      title: "Rota removida",
-      description: "Rota removida com sucesso!"
-    });
   };
 
-  const updateMarco = (updatedMarco: Marco) => {
-    if (!currentRoute) return;
-
-    const updatedRoute = {
-      ...currentRoute,
-      marcos: currentRoute.marcos.map(m => 
-        m.id === updatedMarco.id ? updatedMarco : m
-      )
-    };
-
-    const updatedRoutes = routes.map(r => 
-      r.id === currentRoute.id ? updatedRoute : r
-    );
-
-    saveData(updatedRoutes);
-    setCurrentRoute(updatedRoute);
-  };
-
-  const updatePresent = (updatedPresent: Present) => {
-    const updatedPresents = presents.map(p => 
-      p.id === updatedPresent.id ? updatedPresent : p
-    );
+  const addPresent = async (present: Omit<Present, 'id'>) => {
+    if (!firestoreService) return;
     
-    saveData(routes, updatedPresents);
+    try {
+      const newPresent: Omit<Present, 'id'> = {
+        ...present,
+        collected: false
+      };
+
+      await firestoreService.addPresent(newPresent);
+
+      toast({
+        title: "Presente adicionado",
+        description: `Presente "${present.name}" adicionado ao mapa!`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar presente",
+        variant: "destructive"
+      });
+    }
   };
 
-  const updateCredenciado = (updatedCredenciado: Credenciado) => {
-    const updatedCredenciados = credenciados.map(c => 
-      c.id === updatedCredenciado.id ? updatedCredenciado : c
-    );
+  const removePresent = async (presentId: string) => {
+    if (!firestoreService) return;
     
-    saveData(routes, presents, updatedCredenciados);
+    try {
+      await firestoreService.deletePresent(presentId);
+      toast({
+        title: "Presente removido",
+        description: "Presente removido com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao remover presente",
+        variant: "destructive"
+      });
+    }
   };
 
-  const cloneMarco = (marco: Marco) => {
-    if (!currentRoute) return;
+  const addCredenciado = async (credenciado: Omit<Credenciado, 'id'>) => {
+    if (!firestoreService) return;
+    
+    try {
+      await firestoreService.addCredenciado(credenciado);
 
-    const newMarco: Marco = {
-      ...marco,
-      id: Date.now().toString(),
-      name: `${marco.name} (Cópia)`,
-      lat: marco.lat + 0.0001, // Pequeno offset para não sobrepor
-      lng: marco.lng + 0.0001
-    };
-
-    const updatedRoute = {
-      ...currentRoute,
-      marcos: [...currentRoute.marcos, newMarco]
-    };
-
-    const updatedRoutes = routes.map(r => 
-      r.id === currentRoute.id ? updatedRoute : r
-    );
-
-    saveData(updatedRoutes);
-    setCurrentRoute(updatedRoute);
-
-    toast({
-      title: "Marco clonado",
-      description: `Marco "${newMarco.name}" criado com sucesso!`
-    });
+      toast({
+        title: "Credenciado adicionado",
+        description: `Estabelecimento "${credenciado.name}" adicionado ao mapa!`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao adicionar credenciado",
+        variant: "destructive"
+      });
+    }
   };
 
-  const clonePresent = (present: Present) => {
-    const newPresent: Present = {
-      ...present,
-      id: Date.now().toString(),
-      name: `${present.name} (Cópia)`,
-      lat: present.lat + 0.0001, // Pequeno offset para não sobrepor
-      lng: present.lng + 0.0001,
-      collected: false
-    };
-
-    const newPresents = [...presents, newPresent];
-    saveData(routes, newPresents);
-
-    toast({
-      title: "Presente clonado",
-      description: `Presente "${newPresent.name}" criado com sucesso!`
-    });
+  const removeCredenciado = async (credenciadoId: string) => {
+    if (!firestoreService) return;
+    
+    try {
+      await firestoreService.deleteCredenciado(credenciadoId);
+      toast({
+        title: "Credenciado removido",
+        description: "Estabelecimento removido com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao remover credenciado",
+        variant: "destructive"
+      });
+    }
   };
 
-  const cloneCredenciado = (credenciado: Credenciado) => {
-    const newCredenciado: Credenciado = {
-      ...credenciado,
-      id: Date.now().toString(),
-      name: `${credenciado.name} (Cópia)`,
-      lat: credenciado.lat + 0.0001, // Pequeno offset para não sobrepor
-      lng: credenciado.lng + 0.0001
-    };
+  const collectPresent = async (presentId: string) => {
+    if (!firestoreService) return;
+    
+    try {
+      await firestoreService.updatePresent(presentId, { collected: true });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao coletar presente",
+        variant: "destructive"
+      });
+    }
+  };
 
-    const newCredenciados = [...credenciados, newCredenciado];
-    saveData(routes, presents, newCredenciados);
+  const removeMarco = async (marcoId: string) => {
+    if (!currentRoute || !firestoreService) return;
 
-    toast({
-      title: "Credenciado clonado",
-      description: `Credenciado "${newCredenciado.name}" criado com sucesso!`
-    });
+    try {
+      const updatedRoute = {
+        ...currentRoute,
+        marcos: currentRoute.marcos.filter(m => m.id !== marcoId)
+      };
+
+      await firestoreService.updateRoute(currentRoute.id, updatedRoute);
+      setCurrentRoute(updatedRoute);
+
+      toast({
+        title: "Marco removido",
+        description: "Marco removido com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao remover marco",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const removeRoute = async (routeId: string) => {
+    if (!firestoreService) return;
+    
+    try {
+      await firestoreService.deleteRoute(routeId);
+      
+      if (currentRoute?.id === routeId) {
+        const remainingRoutes = routes.filter(r => r.id !== routeId);
+        setCurrentRoute(remainingRoutes.length > 0 ? remainingRoutes[0] : null);
+      }
+
+      toast({
+        title: "Rota removida",
+        description: "Rota removida com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao remover rota",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateMarco = async (updatedMarco: Marco) => {
+    if (!currentRoute || !firestoreService) return;
+
+    try {
+      const updatedRoute = {
+        ...currentRoute,
+        marcos: currentRoute.marcos.map(m =>
+          m.id === updatedMarco.id ? updatedMarco : m
+        )
+      };
+
+      await firestoreService.updateRoute(currentRoute.id, updatedRoute);
+      setCurrentRoute(updatedRoute);
+
+      toast({
+        title: "Marco atualizado",
+        description: "Marco atualizado com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar marco",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updatePresent = async (updatedPresent: Present) => {
+    if (!firestoreService) return;
+
+    try {
+      await firestoreService.updatePresent(updatedPresent.id, updatedPresent);
+
+      toast({
+        title: "Presente atualizado",
+        description: "Presente atualizado com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar presente",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateCredenciado = async (updatedCredenciado: Credenciado) => {
+    if (!firestoreService) return;
+
+    try {
+      await firestoreService.updateCredenciado(updatedCredenciado.id, updatedCredenciado);
+
+      toast({
+        title: "Credenciado atualizado",
+        description: "Credenciado atualizado com sucesso!"
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar credenciado",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const cloneMarco = async (marco: Marco) => {
+    if (!currentRoute || !firestoreService) return;
+
+    try {
+      const newMarco: Marco = {
+        ...marco,
+        id: Date.now().toString(),
+        name: `${marco.name} (Cópia)`,
+        lat: marco.lat + 0.0001, // Pequeno offset para não sobrepor
+        lng: marco.lng + 0.0001
+      };
+
+      const updatedRoute = {
+        ...currentRoute,
+        marcos: [...currentRoute.marcos, newMarco]
+      };
+
+      await firestoreService.updateRoute(currentRoute.id, updatedRoute);
+      setCurrentRoute(updatedRoute);
+
+      toast({
+        title: "Marco clonado",
+        description: `Marco "${newMarco.name}" criado com sucesso!`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao clonar marco",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const clonePresent = async (present: Present) => {
+    if (!firestoreService) return;
+
+    try {
+      const newPresent: Omit<Present, 'id'> = {
+        ...present,
+        name: `${present.name} (Cópia)`,
+        description: present.description,
+        type: present.type,
+        lat: present.lat + 0.0001, // Pequeno offset para não sobrepor
+        lng: present.lng + 0.0001,
+        collected: false,
+        value: present.value
+      };
+
+      await firestoreService.addPresent(newPresent);
+
+      toast({
+        title: "Presente clonado",
+        description: `Presente "${newPresent.name}" criado com sucesso!`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao clonar presente",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const cloneCredenciado = async (credenciado: Credenciado) => {
+    if (!firestoreService) return;
+
+    try {
+      const newCredenciado: Omit<Credenciado, 'id'> = {
+        ...credenciado,
+        name: `${credenciado.name} (Cópia)`,
+        description: credenciado.description,
+        type: credenciado.type,
+        lat: credenciado.lat + 0.0001, // Pequeno offset para não sobrepor
+        lng: credenciado.lng + 0.0001,
+        discount: credenciado.discount,
+        phone: credenciado.phone,
+        address: credenciado.address
+      };
+
+      await firestoreService.addCredenciado(newCredenciado);
+
+      toast({
+        title: "Credenciado clonado",
+        description: `Credenciado "${newCredenciado.name}" criado com sucesso!`
+      });
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Erro ao clonar credenciado",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -350,6 +472,8 @@ const MapContainer = () => {
           credenciados={credenciados}
           onCreateRoute={createNewRoute}
           onSelectRoute={selectRoute}
+          onSelectPresent={selectPresent}
+          onSelectCredenciado={selectCredenciado}
           onRemoveRoute={removeRoute}
           onRemoveMarco={removeMarco}
           onAddPresent={addPresent}
@@ -358,8 +482,20 @@ const MapContainer = () => {
           onRemoveCredenciado={removeCredenciado}
         />
         <SidebarInset className="flex-1 w-full">
+          <div className="absolute top-4 right-4 z-10">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </Button>
+          </div>
           <MapView
             currentRoute={currentRoute}
+            selectedElement={selectedElement}
             onAddMarco={addMarco}
             presents={presents}
             credenciados={credenciados}
